@@ -1,0 +1,105 @@
+<!-- Fondo animado (shader WebGL): cáusticas en grises oscuros con grano. El shader está en src/shaders -->
+<canvas id="fondo-fluido" class="bg-layer bg-fluid" aria-hidden="true"></canvas>
+
+<script>
+	import frag from '../shaders/fondo-fluido.frag?raw';
+
+	const canvas = document.getElementById('fondo-fluido') as HTMLCanvasElement | null;
+	const gl = canvas?.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'low-power' });
+
+	const vert = 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }';
+	// Resolución reducida: ahorra GPU y refuerza el grano retro al escalar
+	const ESCALA = 0.55;
+	const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+	function programa(gl: WebGLRenderingContext) {
+		const compilar = (tipo: number, src: string) => {
+			const s = gl.createShader(tipo)!;
+			gl.shaderSource(s, src);
+			gl.compileShader(s);
+			return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null;
+		};
+		const vs = compilar(gl.VERTEX_SHADER, vert);
+		const fs = compilar(gl.FRAGMENT_SHADER, frag);
+		if (!vs || !fs) return null;
+		const prog = gl.createProgram()!;
+		gl.attachShader(prog, vs);
+		gl.attachShader(prog, fs);
+		gl.linkProgram(prog);
+		return gl.getProgramParameter(prog, gl.LINK_STATUS) ? prog : null;
+	}
+
+	if (canvas && gl) {
+		let uRes: WebGLUniformLocation | null = null;
+		let uTime: WebGLUniformLocation | null = null;
+		let listo = false;
+		let raf = 0;
+
+		// Crea todo lo que vive en la GPU; se repite si el navegador la reinicia (contexto perdido)
+		const preparar = () => {
+			const prog = programa(gl);
+			if (!prog) return false;
+			gl.useProgram(prog);
+			// Un solo triángulo que cubre toda la pantalla
+			gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+			const loc = gl.getAttribLocation(prog, 'p');
+			gl.enableVertexAttribArray(loc);
+			gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+			uRes = gl.getUniformLocation(prog, 'uRes');
+			uTime = gl.getUniformLocation(prog, 'uTime');
+			return true;
+		};
+
+		const dibujar = (ms: number) => {
+			gl.uniform1f(uTime, ms / 1000);
+			gl.drawArrays(gl.TRIANGLES, 0, 3);
+		};
+
+		const ajustar = () => {
+			canvas.width = Math.max(2, Math.floor(window.innerWidth * ESCALA));
+			canvas.height = Math.max(2, Math.floor(window.innerHeight * ESCALA));
+			gl.viewport(0, 0, canvas.width, canvas.height);
+			gl.uniform2f(uRes, canvas.width, canvas.height);
+			// Cambiar el tamaño borra el lienzo: con movimiento reducido no hay bucle que lo repinte
+			if (reduce && listo) dibujar(4000);
+		};
+
+		// El bucle solo corre con la pestaña visible y sin ningún <dialog> abierto:
+		// el desenfoque de su fondo sobre un canvas que cambia en cada fotograma es lo más costoso
+		const bucle = (ms: number) => {
+			dibujar(ms);
+			raf = requestAnimationFrame(bucle);
+		};
+		const sincronizar = () => {
+			cancelAnimationFrame(raf);
+			if (!listo || reduce) return;
+			if (!document.hidden && !document.querySelector('dialog[open]')) raf = requestAnimationFrame(bucle);
+		};
+
+		const arrancar = () => {
+			listo = preparar();
+			if (!listo) return;
+			ajustar();
+			canvas.classList.add('listo');
+			sincronizar();
+		};
+
+		arrancar();
+		window.addEventListener('resize', ajustar);
+		document.addEventListener('visibilitychange', sincronizar);
+		new MutationObserver(sincronizar).observe(document.body, {
+			subtree: true,
+			attributes: true,
+			attributeFilter: ['open'],
+		});
+
+		// Móviles: el navegador puede reiniciar la GPU y soltar el contexto; se reconstruye al volver
+		canvas.addEventListener('webglcontextlost', (e) => {
+			e.preventDefault();
+			listo = false;
+			cancelAnimationFrame(raf);
+		});
+		canvas.addEventListener('webglcontextrestored', arrancar);
+	}
+</script>

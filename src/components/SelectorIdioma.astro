@@ -1,0 +1,122 @@
+---
+/**
+ * Selector de idioma: dos banderas (Perú = español en "/", Reino Unido = inglés en "/en/").
+ * Son enlaces normales (indexables y sin JS); el script solo añade la sección visible
+ * (#ancla) para que al cambiar de idioma la persona siga donde estaba.
+ * Las banderas son SVG propios: Windows no dibuja los emojis de bandera.
+ */
+import { UI, getLang, rutaIdioma, type Lang } from '../i18n/ui';
+
+const lang = getLang(Astro.url);
+const t = UI[lang].idioma;
+const OPCIONES: Lang[] = ['es', 'en'];
+---
+
+<div class="idiomas" role="group" aria-label={t.grupo}>
+	{
+		OPCIONES.map((l) => (
+			<a
+				class="bandera"
+				href={rutaIdioma(l)}
+				lang={l}
+				hreflang={l}
+				title={t[l]}
+				aria-label={t[l]}
+				aria-current={l === lang ? 'page' : undefined}
+				data-idioma={l}
+			>
+				{l === 'es' ? (
+					<svg viewBox="0 0 3 2" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+						<rect width="3" height="2" fill="#D91023" />
+						<rect x="1" width="1" height="2" fill="#fff" />
+					</svg>
+				) : (
+					<svg viewBox="0 0 60 30" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+						<rect width="60" height="30" fill="#012169" />
+						<path d="M0 0L60 30M60 0L0 30" stroke="#fff" stroke-width="6" />
+						<path d="M0 0L60 30M60 0L0 30" stroke="#C8102E" stroke-width="2" />
+						<path d="M30 0V30M0 15H60" stroke="#fff" stroke-width="10" />
+						<path d="M30 0V30M0 15H60" stroke="#C8102E" stroke-width="6" />
+					</svg>
+				)}
+			</a>
+		))
+	}
+</div>
+
+<script>
+	const SECCIONES = ['inicio', 'experiencia', 'proyectos', 'habilidades', 'contacto'];
+	// Sección que se está viendo: la última cuyo borde superior ya pasó el 40 % de la pantalla
+	const seccionActual = () => {
+		let actual = SECCIONES[0];
+		for (const id of SECCIONES) {
+			const el = document.getElementById(id);
+			if (el && el.getBoundingClientRect().top <= window.innerHeight * 0.4) actual = id;
+		}
+		return actual;
+	};
+	document.querySelectorAll<HTMLAnchorElement>('.idiomas a[data-idioma]').forEach((a) => {
+		const base = a.getAttribute('href')!.split('#')[0];
+		a.addEventListener('click', (e) => {
+			if (a.getAttribute('aria-current') === 'page') {
+				e.preventDefault(); // ya está en ese idioma
+				return;
+			}
+			const id = seccionActual();
+			a.href = id === 'inicio' ? base : `${base}#${id}`;
+		});
+	});
+</script>
+
+<style>
+	.idiomas {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+	.bandera {
+		display: block;
+		width: 1.75rem;
+		height: 1.75rem;
+		border-radius: 999px;
+		overflow: hidden;
+		border: 1px solid rgb(255 255 255 / 0.25);
+		opacity: 0.5;
+		filter: saturate(0.6);
+		transition:
+			opacity 0.2s,
+			filter 0.2s,
+			transform 0.2s,
+			box-shadow 0.2s;
+	}
+	.bandera svg {
+		display: block;
+		width: 100%;
+		height: 100%;
+	}
+	.bandera:hover {
+		opacity: 0.9;
+		filter: none;
+		transform: scale(1.08);
+	}
+	/* Idioma activo: color completo y aro blanco */
+	.bandera[aria-current='page'] {
+		opacity: 1;
+		filter: none;
+		border-color: #fff;
+		box-shadow: 0 0 0 2px rgb(255 255 255 / 0.35);
+		cursor: default;
+	}
+	.bandera[aria-current='page']:hover {
+		transform: none;
+	}
+	.bandera:focus-visible {
+		outline: 2px solid #fff;
+		outline-offset: 3px;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.bandera {
+			transition: none;
+		}
+	}
+</style>

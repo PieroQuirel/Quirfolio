@@ -1,87 +1,345 @@
 ---
-import Tecno from "./Tecno.astro";
-import HtmlIcon from '@components/icons/Html.astro';
-import CssIcon from '@components/icons/Css.astro';
-import JavaScriptIcon from '@components/icons/JavaScript.astro';
-import TailwindIcon from '@components/icons/Tailwind.astro';
-import BootstrapIcon from '@components/icons/Bootstrap.astro';
-import ReactIcon from '@components/icons/React.astro';
-import AngularIcon from '@components/icons/Angular.astro';
-import AstroIcon from '@components/icons/Astro.astro';
-import SpringBootIcon from '@components/icons/SpringBoot.astro';
-import DjangoIcon from '@components/icons/Django.astro';
-import FlaskIcon from '@components/icons/Flask.astro';
-import PHPIcon from '@components/icons/PHP.astro';
-import LaravelIcon from '@components/icons/Laravel.astro';
-import NodeJSIcon from '@components/icons/NodeJS.astro';
-import FlutterIcon from '@components/icons/Flutter.astro';
-import SwiftIcon from '@components/icons/Swift.astro';
-import MySQLIcon from '@components/icons/MySQL.astro';
-import PostgreSQLIcon from '@components/icons/PostgreSQL.astro';
-import SQLServerIcon from '@components/icons/SQLServer.astro';
-import SQLiteIcon from '@components/icons/SQLite.astro';
-import FirebaseIcon from '@components/icons/Firebase.astro';
-import MongoDBIcon from '@components/icons/MongoDB.astro';
-import GitIcon from '@components/icons/Git.astro';
-import GitHubIcon from '@components/icons/GitHub.astro';
-import AWSIcon from '@components/icons/AWS.astro';
-import FigmaIcon from '@components/icons/Figma.astro';
+import TarjetaTecno from './TarjetaTecno.astro';
+import Inclinar from './Inclinar.astro';
+import PanelHabilidad from './PanelHabilidad.astro';
+// Carriles, cartas y la información de cada panel: edítalos en src/data/habilidades.ts (inglés: src/i18n/en/habilidades.ts)
+import { UI, getLang } from '../i18n/ui';
+import { getCarriles } from '../i18n/datos';
+
+const lang = getLang(Astro.url);
+const t = UI[lang].hab;
+const CARRILES = getCarriles(lang);
 ---
 
-<h2>Frontend</h2>
+<section class="habilidades reveal-host" id="habilidades">
+	<div class="reveal from-bottom">
+		<div class="hab">
+			<h2 class="encabezado">{t.titulo}</h2>
 
-<div class="flex rounded-md border border-white/20 items-center 
-text-xl gap-x-2 py-3 px-3 bg-white/5 z-10 mt-2 mb-10">
+			<div class="carriles">
+				<p class="sr-only" id="hab-ayuda">{t.ayuda}</p>
+				{
+					CARRILES.map((c) => (
+						<div class="grupo">
+							<h3 class="nombre">{c.nombre}</h3>
+							<div class="carril" role="list" aria-label={t.cartasDe(c.nombre)}>
+								{c.cartas.map(({ titulo, icono: Icono }) => (
+									<div
+										class="mov"
+										role="listitem"
+										tabindex="0"
+										aria-label={titulo}
+										aria-describedby="hab-ayuda"
+										data-carta={titulo}
+									>
+										<div class="levanta">
+											<Inclinar radio="4.5cqw" luz={false}>
+												<TarjetaTecno titulo={`{ ${titulo} }`} etiqueta={c.etiqueta}>
+													<Icono />
+												</TarjetaTecno>
+											</Inclinar>
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
+					))
+				}
+			</div>
 
-<Tecno><HtmlIcon class="size-20" />HTML</Tecno>
-<Tecno><CssIcon class="size-20" />CSS</Tecno>
-<Tecno><JavaScriptIcon class="size-20" />JavaScript</Tecno>
-<Tecno><BootstrapIcon class="size-20" />Bootstrap</Tecno>
-<Tecno><ReactIcon class="size-20" />React</Tecno>
-<Tecno><AngularIcon class="size-20" />Angular</Tecno>
-<Tecno><TailwindIcon class="size-20" />Tailwind</Tecno>
-<Tecno><AstroIcon class="size-20" />Astro</Tecno>
+			<!-- Zona para arrastrar cartas (PanelHabilidad) -->
+			<div class="zona" data-zona-cartas data-estado="vacio" role="region" aria-label={t.region}>
+				<p class="zona-texto">{t.zonaPre} <span>{t.zonaResalte}</span> {t.zonaPost}</p>
+				<div class="zona-panel"></div>
+			</div>
+		</div>
 
-</div>
+		<!-- Un panel por habilidad, inactivo hasta que se suelta su carta -->
+		{
+			CARRILES.flatMap((c) =>
+				c.cartas.map((h) => (
+					<template data-panel={h.titulo}>
+						<PanelHabilidad habilidad={h} etiqueta={c.etiqueta} lang={lang} />
+					</template>
+				)),
+			)
+		}
+	</div>
+</section>
 
-<h2>Backend</h2>
+<script>
+	import { iniciarCartas } from '../scripts/cartas';
 
-<div class="flex rounded-md border border-white/20 items-center 
-text-xl gap-x-2 py-3 px-3 bg-white/5 z-10 mt-2 mb-10">
-<Tecno><SpringBootIcon class="size-20" />Spring Boot</Tecno>
-<Tecno><DjangoIcon class="size-20" />Django</Tecno>
-<Tecno><FlaskIcon class="size-20" />Flask</Tecno>
-<Tecno><PHPIcon class="size-20" />PHP</Tecno>
-<Tecno><LaravelIcon class="size-20" />Laravel</Tecno>
+	const raiz = document.querySelector<HTMLElement>('.habilidades');
+	if (raiz) iniciarCartas(raiz);
+</script>
 
-</div>
+<style>
+	/* La sección ocupa todo el ancho de la pantalla para que una carta arrastrada pueda
+	   recorrerla de lado a lado sin recortarse; el contenido (.hab) va centrado. */
+	.habilidades {
+		container-type: inline-size;
+		width: 100%;
+		overflow-x: clip; /* recorta solo en el borde de la pantalla (evita scroll horizontal) */
+		padding-block: 6rem 8rem;
+		scroll-margin-top: 4rem;
+		color: #fff;
+		font-family: 'Saira Semi Condensed', sans-serif;
+	}
 
-<h2>Mobile</h2>
+	@media (max-width: 48rem) {
+		.habilidades {
+			padding-block-start: 2rem;
+		}
+	}
 
-<div class="flex rounded-md border border-white/20 items-center 
-text-xl gap-x-2 py-3 px-3 bg-white/5 z-10 mt-2 mb-10">
-<Tecno><FlutterIcon class="size-20" />Flutter</Tecno>
-<Tecno><SwiftIcon class="size-20" />Swift</Tecno>
-</div>
+	.hab {
+		/* Ancho del contenido proporcional a la pantalla (≈ 72 %, como en 2560 px); todo escala con él */
+		--ancho: min(100cqw - 2rem, max(72cqw, 60rem));
+		--u: calc(var(--ancho) / 100); /* 1 % del ancho del contenido */
+		--carta: calc(var(--u) * 6.6); /* ancho de una carta (≈ 83 px de 1260 en el diseño) */
+		--alto-carril: calc(var(--carta) * 1.24);
+		--etq: max(1.75rem, calc(var(--u) * 2.3)); /* alto de la etiqueta de cada carril */
+		width: var(--ancho);
+		margin-inline: auto;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		grid-template-areas:
+			'. titulo'
+			'carriles zona';
+		column-gap: calc(var(--u) * 4.3);
+		row-gap: 0;
+	}
 
-<h2>Base de Datos</h2>
+	.encabezado {
+		grid-area: titulo;
+		justify-self: end;
+		margin-bottom: 0.1rem;
+		font-size: max(2.75rem, calc(var(--u) * 5));
+		font-weight: 700;
+		line-height: 1;
+	}
 
-<div class="flex rounded-md border border-white/20 items-center 
-text-xl gap-x-2 py-3 px-3 bg-white/5 z-10 mt-2 mb-10">
-<Tecno><MySQLIcon class="size-20" />MySQL</Tecno>
-<Tecno><PostgreSQLIcon class="size-20" />PostgreSQL</Tecno>
-<Tecno><SQLServerIcon class="size-20" />SQL Server</Tecno>
-<Tecno><SQLiteIcon class="size-20" />SQLite</Tecno>
-<Tecno><FirebaseIcon class="size-20" />Firebase</Tecno>
-<Tecno><MongoDBIcon class="size-20" />MongoDB</Tecno>
-</div>
+	/* La etiqueta del primer carril queda por encima: el carril se alinea con el borde superior del panel */
+	.carriles {
+		grid-area: carriles;
+		margin-top: calc(var(--etq) * -1);
+		display: flex;
+		flex-direction: column;
+		gap: calc(var(--u) * 2.6);
+	}
+	.grupo {
+		display: flex;
+		flex-direction: column;
+	}
+	.nombre {
+		height: var(--etq);
+		font-size: max(1.25rem, calc(var(--u) * 1.6));
+		font-weight: 400;
+		line-height: var(--etq);
+		color: rgb(255 255 255 / 0.8);
+	}
 
-<h2>Tools</h2>
+	.carril {
+		position: relative;
+		height: var(--alto-carril);
+		border-radius: calc(var(--u) * 1);
+		background: linear-gradient(180deg, #232323, #121212);
+		box-shadow:
+			inset 0 1px 0 rgb(255 255 255 / 0.05),
+			inset 0 0.6rem 1.4rem rgb(0 0 0 / 0.35);
+	}
 
-<div class="flex rounded-md border border-white/20 items-center 
-text-xl gap-x-2 py-3 px-3 bg-white/5 z-10 mt-2 mb-10">
-<Tecno><GitIcon class="size-20" />Git</Tecno>
-<Tecno><GitHubIcon class="size-20" />GitHub</Tecno>
-<Tecno><AWSIcon class="size-20" />AWS</Tecno>
+	/* Cada carta se posiciona por JS con transform; la transición da el rebote al recolocarse */
+	.mov {
+		position: absolute;
+		top: 0;
+		left: 0;
+		z-index: var(--z, 1);
+		width: var(--carta);
+		cursor: grab;
+		touch-action: pan-y; /* en táctil: deslizar en vertical sigue haciendo scroll; en horizontal arrastra */
+		outline: none;
+	}
+	.listo .mov {
+		transition: transform 0.40s cubic-bezier(0.34, 1.35, 0.5, 1);
+	}
+	/* el cursor de la carta manda sobre el "default" de TarjetaTecno */
+	.mov :global(.carta) {
+		cursor: inherit;
+	}
+	.mov.arrastrando {
+		z-index: 100;
+		cursor: grabbing;
+		transition: none;
+	}
+	.con-arrastre {
+		cursor: grabbing;
+	}
 
-</div>
+	/* Agrandamiento al pasar el cursor (y al arrastrar): indica que la carta se puede tomar */
+	.levanta {
+		transform-origin: 50% 60%;
+		transition:
+			transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+			filter 0.3s ease-out;
+	}
+	@media (hover: hover) {
+		.mov:hover {
+			z-index: 60;
+		}
+		.mov:hover .levanta {
+			transform: translateY(-6%) scale(1.14);
+		}
+	}
+	.mov.arrastrando .levanta {
+		transform: scale(1.18);
+		filter: drop-shadow(0 0.9rem 1rem rgb(0 0 0 / 0.28));
+	}
+	/* Sombras de la inclinación más suaves aquí, para que no parezcan bloques negros detrás */
+	.mov :global(.inclinar) {
+		box-shadow: var(--sx, 0px) calc(0.8cqw + var(--sy, 0px)) 2.4cqw rgb(0 0 0 / 0.18);
+	}
+	.mov :global(.inclinar.activo) {
+		box-shadow: var(--sx, 0px) calc(2cqw + var(--sy, 0px)) 5cqw rgb(0 0 0 / 0.25);
+	}
+	.mov:focus-visible {
+		z-index: 60;
+	}
+	.mov:focus-visible .levanta {
+		transform: translateY(-6%) scale(1.14);
+		outline: 2px solid #fff;
+		outline-offset: 3px;
+		border-radius: 0.4rem;
+	}
+
+	/* Cuadro de destino: vacío (texto) o con el panel de la habilidad */
+	.zona {
+		grid-area: zona;
+		position: relative;
+		container-type: inline-size; /* PanelHabilidad mide todo en cqw de este cuadro */
+		display: grid;
+		place-items: center;
+		padding: 2rem;
+		border-radius: max(1.4rem, calc(var(--u) * 1.6));
+		border: 1px solid rgb(255 255 255 / 0.1);
+		background: linear-gradient(180deg, #2a2a2a, #232323);
+		box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+		transition:
+			background 0.35s ease,
+			border-color 0.35s ease,
+			box-shadow 0.35s ease;
+	}
+	.zona > * {
+		grid-area: 1 / 1;
+		min-width: 0;
+	}
+	.zona[data-estado='panel'] {
+		grid-template-columns: minmax(0, 1fr); /* el panel nunca se sale del cuadro */
+	}
+	/* Se ilumina un poco mientras se arrastra una carta, y algo más con la carta encima */
+	.zona.esperando {
+		border-color: rgb(255 255 255 / 0.28);
+		background: linear-gradient(180deg, #333, #292929);
+		box-shadow:
+			inset 0 1px 0 rgb(255 255 255 / 0.12),
+			0 0 2.5rem rgb(255 255 255 / 0.06);
+	}
+	.zona.encima {
+		border-color: rgb(255 255 255 / 0.6);
+		background: linear-gradient(180deg, #3d3d3d, #303030);
+		box-shadow:
+			inset 0 0 2rem rgb(255 255 255 / 0.08),
+			0 0 3.5rem rgb(255 255 255 / 0.14);
+	}
+	.zona-texto {
+		transition: color 0.35s ease;
+	}
+	.zona.esperando .zona-texto {
+		color: #4a4a4a;
+	}
+	.zona.encima .zona-texto {
+		color: #5c5c5c;
+	}
+	/* Con panel: fondo negro como en el diseño, sin relleno (lo pone el panel) */
+	.zona[data-estado='panel'] {
+		place-items: stretch;
+		padding: 0;
+		background: linear-gradient(180deg, #000, #1b1b1b);
+		border-color: rgb(255 255 255 / 0.22);
+	}
+	.zona[data-estado='panel'] .zona-texto,
+	.zona[data-estado='vacio'] .zona-panel {
+		display: none;
+	}
+	.zona[data-estado='panel'].esperando {
+		border-color: rgb(255 255 255 / 0.4);
+	}
+	.zona[data-estado='panel'].encima {
+		border-color: rgb(255 255 255 / 0.75);
+		background: linear-gradient(180deg, #0d0d0d, #262626);
+	}
+	.zona.cerrando .zona-panel {
+		opacity: 0;
+		filter: blur(4px);
+		transition:
+			opacity 0.18s ease-in,
+			filter 0.18s ease-in;
+	}
+	.zona-texto {
+		font-size: max(2.5rem, calc(var(--u) * 6.8));
+		font-weight: 700;
+		line-height: 0.98;
+		text-align: center;
+		text-wrap: balance;
+		color: #3a3a3a;
+		user-select: none;
+	}
+	.zona-texto span {
+		display: block;
+	}
+
+	/* Móvil / pantallas angostas: todo en una columna, el panel debajo de los carriles */
+	@container (max-width: 48rem) {
+		.hab {
+			--carta: clamp(3.75rem, 15cqw, 5rem);
+			grid-template-columns: 1fr;
+			grid-template-areas:
+				'titulo'
+				'carriles'
+				'zona';
+		}
+		.encabezado {
+			justify-self: start;
+			margin-bottom: 1.5rem;
+		}
+		.carriles {
+			margin-top: 0;
+			gap: 1.6rem;
+		}
+		.carril {
+			border-radius: 0.75rem;
+		}
+		.zona {
+			margin-top: 2.5rem;
+			min-height: 16rem;
+		}
+		.zona-texto {
+			font-size: clamp(2.25rem, 12cqw, 3.5rem);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.listo .mov,
+		.levanta,
+		.zona,
+		.zona-texto {
+			transition: none;
+		}
+		.mov:hover .levanta,
+		.mov.arrastrando .levanta,
+		.mov:focus-visible .levanta {
+			transform: none;
+		}
+	}
+</style>

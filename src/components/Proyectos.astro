@@ -1,39 +1,839 @@
 ---
-import { date } from "astro:schema"
-import ProyectoCard from "./ProyectoCard.astro"
+import { Image } from 'astro:assets';
+import ProyectoCard from './ProyectoCard.astro';
+import BotonesProyecto from './BotonesProyecto.astro';
+import '@fontsource/saira-semi-condensed/400.css';
+import '@fontsource/saira-semi-condensed/700.css';
+import { UI, getLang } from '../i18n/ui';
+import { getProyectos } from '../i18n/datos';
 
-const PROYECTOS = [
-    {
-        image: "/src/images/celleyes-app.png",
-        title: "CELLEYES",
-        date: "Abril - Diciembre 2024",
-        description: "Desarrollé la app mobile con Flutter para asegurar compatibilidad entre Android y iOS a partir de un código base, encargándome de diseñar tanto la interfaz (UI) como la experiencia de usuario (UX). Utilicé MySQL como BD para sincronización en tiempo real. Realicé el testing manual y apliqué feedback de los usuarios. Backend con Django para mayor rapidez con gran volumen de datos, Frontend con Angular por su escalabilidad.",
-        link1: "https://github.com/Tecsupsoft",
-        link2: "https://github.com/Tecsupsoft",
-        style: "bg-blue-500 items-baseline"
-    },
-    {
-        image: "/src/images/Uywalky.png",
-        title: "UyWalky",
-        date: "Noviembre - Diciembre 2023",
-        description: "Realicé el frontend responsivo con React, optimizando la experiencia de usuario y el diseño de componentes. Proyecto presentado en la Feria Tecnológica de TECSUP.",
-        link1: "https://github.com/CarlitosMikhaelTP/PROJECT_2023-II",
-        link2: "https://github.com/CarlitosMikhaelTP/PROJECT_2023-II",
-        style: "bg-orange-500 items-center"
-    },
-    {
-        image: "/src/images/patitas.png",
-        title: "Refugio de Patitas",
-        date: "Julio 2023",
-        description: "Realicé el backend y sus protocolos con Laravel para un alto rendimiento. Utilicé SQLite para la BD, por su rapidez y efectividad.",
-        link1: "https://github.com/PieroQuirel/RefugioPatitas",
-        link2: "https://github.com/PieroQuirel/RefugioPatitas",
-        style: "bg-gray-200 items-center"
-    },
-]
+const t = UI[getLang(Astro.url)].proy;
+const PROYECTOS = getProyectos(getLang(Astro.url));
+const LISTA = PROYECTOS.map((p) => ({ ...p, imagen: p.imagenes[0] }));
 ---
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-    {PROYECTOS.map((proyecto) => (
-            <ProyectoCard {...proyecto} />
-    ))}
-</div>
+
+<section class="proyectos reveal-host" id="proyectos">
+	<div class="reveal from-bottom">
+		<h2 class="encabezado">{t.titulo}</h2>
+
+		<div class="cinta" aria-roledescription={t.rolCarrusel} aria-label={t.carrusel}>
+			<div class="pista">
+				{LISTA.map((p, i) => <ProyectoCard i={i} {...p} />)}
+			</div>
+		</div>
+		<p class="pista-ayuda">{t.ayuda}</p>
+	</div>
+
+	<dialog class="modal" id="proyecto-modal" data-lenis-prevent>
+		<button type="button" class="cerrar" aria-label={t.cerrarDetalles}>
+			<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"></path></svg>
+		</button>
+		<div class="caja">
+
+			{
+				LISTA.map((p, i) => (
+					<article class:list={['detalle', { 'sin-media': p.imagenes.length === 0 }]} data-i={i} style={`--color:${p.color}`} hidden>
+						{p.imagenes.length > 0 && (
+							<figure class="media">
+								<div class="galeria" data-galeria role="group" aria-roledescription={t.rolCarrusel} aria-label={t.imagenesDe(p.titulo)}>
+									<ul class="g-pista" tabindex={p.imagenes.length > 1 ? 0 : undefined}>
+										{p.imagenes.map((img, k) => (
+											<li class="g-slide">
+												<button type="button" class="g-ampliar" aria-label={t.ampliar} aria-haspopup="dialog">
+												<Image
+													src={img}
+													alt={t.vistaPrevia(p.titulo, k + 1, p.imagenes.length)}
+													widths={[480, 800, 1200]}
+													sizes="(min-width: 46rem) 28rem, 90vw"
+													draggable="false"
+												/>
+												</button>
+											</li>
+										))}
+									</ul>
+									{p.imagenes.length > 1 && (
+										<>
+											<button type="button" class="g-flecha g-ant" aria-label={t.anterior}>
+												<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+											</button>
+											<button type="button" class="g-flecha g-sig" aria-label={t.siguiente}>
+												<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+											</button>
+											<div class="g-puntos">
+												{p.imagenes.map((_, k) => (
+													<button type="button" class="g-punto" aria-label={t.irA(k + 1)} data-k={k} />
+												))}
+											</div>
+										</>
+									)}
+								</div>
+							</figure>
+						)}
+						<div class="texto">
+							<h3 class="d-titulo">{p.titulo}</h3>
+							<p class="d-meta">{p.rol} · {p.fecha}</p>
+							<p class="d-desc">{p.descripcion}</p>
+							<h3>{t.stack}</h3>
+							<ul class="d-stack">{p.stack.map((t) => <li class="vidrio etiqueta">{t}</li>)}</ul>
+							<div class="d-botones"><BotonesProyecto web={p.web} github={p.github} /></div>
+						</div>
+					</article>
+				))
+			}
+		</div>
+	</dialog>
+
+	<!-- Visor de imagen a pantalla completa -->
+	<dialog class="visor" id="proyecto-visor" aria-label={t.visor}>
+		<button type="button" class="visor-cerrar" aria-label={t.cerrarImagen}>
+			<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"></path></svg>
+		</button>
+	</dialog>
+</section>
+
+<script>
+	import { arrastrable } from '../scripts/arrastre';
+
+	const cinta = document.querySelector<HTMLElement>('.cinta')!;
+	const pista = cinta.querySelector<HTMLElement>('.pista')!;
+	const modal = document.querySelector<HTMLDialogElement>('#proyecto-modal')!;
+	const detalles = [...modal.querySelectorAll<HTMLElement>('.detalle')];
+	const originales = [...pista.children] as HTMLElement[];
+	const reducido = matchMedia('(prefers-reduced-motion: reduce)');
+
+	const BASE = reducido.matches ? 0 : -45;
+	const TAU = 0.9; // s que tarda en volver a la velocidad normal
+
+	let x = 0;
+	let v = BASE;
+	let ancho = 1;
+	let pausas = 0; // hover, foco, modal
+	let visible = true;
+	let raf = 0;
+	let ultimo = 0;
+
+	// Duplica las tarjetas las veces necesarias para que nunca se vea el final de la pista
+	// ---- Pasillo 3D: cada tarjeta se coloca sobre un arco (cámara dentro de un cilindro) ----
+	let tarjetas: HTMLElement[] = [];
+	let centros: number[] = [];
+	let vista = 1; // ancho de la cinta
+	let radio = 1;
+	let persp = 1; // perspectiva en px
+	const FI_MAX = 1.25; // rad: ángulo máximo de una tarjeta sobre el arco
+
+	const ajustar = () => {
+		vista = cinta.clientWidth;
+		const movil = vista < 640; // en pantallas angostas el efecto se atenúa
+		radio = (vista * 0.52) / (movil ? 0.55 : 1);
+		persp = vista * (movil ? 1.1 : 0.58);
+		pista.style.perspective = `${persp}px`;
+		pista.style.perspectiveOrigin = `${vista / 2}px 50%`;
+	};
+
+	const preparar = () => {
+		pista.querySelectorAll('[data-clon]').forEach((c) => c.remove());
+		const primera = originales[0];
+		const final = originales[originales.length - 1];
+		const hueco = parseFloat(getComputedStyle(pista).columnGap) || 0;
+		ancho = final.offsetLeft + final.offsetWidth - primera.offsetLeft + hueco;
+		if (ancho < 2) return; // sección aún oculta (reveal): se calcula cuando se muestre
+		const copias = Math.min(12, Math.ceil(cinta.clientWidth / ancho) + 1);
+		for (let c = 0; c < copias; c++)
+			originales.forEach((el) => {
+				const clon = el.cloneNode(true) as HTMLElement;
+				clon.dataset.clon = '';
+				clon.setAttribute('aria-hidden', 'true');
+				clon.querySelectorAll('a, button').forEach((f) => f.setAttribute('tabindex', '-1'));
+				pista.append(clon);
+			});
+		tarjetas = [...pista.children] as HTMLElement[];
+		centros = tarjetas.map((t) => t.offsetLeft - primera.offsetLeft + t.offsetWidth / 2);
+		ajustar();
+	};
+
+	const pintar = () => {
+		if (ancho < 2) return;
+		x %= ancho;
+		if (x > 0) x -= ancho;
+		// La pista ya no se mueve: cada tarjeta lleva su desplazamiento + la proyección sobre el arco
+		tarjetas.forEach((t, i) => {
+			const s = centros[i] + x - vista / 2; // distancia al centro de la pantalla
+			const fi = Math.max(-FI_MAX, Math.min(FI_MAX, s / radio));
+			const dx = x + radio * Math.sin(fi) - s;
+			const dz = radio * (1 - Math.cos(fi));
+			// Si el borde cercano casi toca la cámara se proyecta enorme (decenas de miles de px) y estira
+			// el alto de la página aunque esté fuera de pantalla: esas tarjetas lejanas se anulan.
+			const cerca = dz + (t.offsetWidth / 2) * Math.abs(Math.sin(fi));
+			t.style.transform =
+				(persp - cerca) / persp < 0.2
+					? `translate3d(${dx}px,0,0) scale(0)`
+					: `translate3d(${dx}px,0,${dz}px) rotateY(${-fi}rad)`;
+		});
+	};
+
+	const cuadro = (t: number) => {
+		const dt = Math.min(0.05, (t - ultimo) / 1000);
+		ultimo = t;
+		if (!arrastre.arrastrando) {
+			// la velocidad (que puede venir de un lanzamiento) se relaja hacia la normal, o hacia 0 si hay pausa
+			const objetivo = pausas > 0 ? 0 : BASE;
+			v += (objetivo - v) * (1 - Math.exp(-dt / TAU));
+			x += v * dt;
+			pintar();
+		}
+		raf = visible ? requestAnimationFrame(cuadro) : 0;
+	};
+	const arrancar = () => {
+		if (raf) return;
+		ultimo = performance.now();
+		raf = requestAnimationFrame(cuadro);
+	};
+
+	preparar();
+	pintar();
+	arrancar();
+	new IntersectionObserver(([e]) => {
+		visible = e.isIntersecting;
+		if (visible) arrancar();
+	}).observe(cinta);
+	new ResizeObserver(() => {
+		const antes = ancho;
+		preparar();
+		x = antes > 1 ? (x / antes) * ancho : x;
+		pintar();
+	}).observe(cinta);
+
+	// ---- Pausas: puntero encima, foco por teclado, modal abierto ----
+	cinta.addEventListener('pointerenter', (e) => e.pointerType === 'mouse' && pausas++);
+	cinta.addEventListener('pointerleave', (e) => e.pointerType === 'mouse' && (pausas = Math.max(0, pausas - 1)));
+	cinta.addEventListener('focusin', () => pausas++);
+	cinta.addEventListener('focusout', () => (pausas = Math.max(0, pausas - 1)));
+
+	// ---- Arrastre con inercia: al soltar, la cinta conserva la velocidad del gesto ----
+	let x0 = 0;
+	let previo = 0;
+	let tPrevio = 0;
+	const arrastre = arrastrable(cinta, {
+		alPresionar: (e) => {
+			previo = e.clientX;
+			tPrevio = e.timeStamp;
+			x0 = x;
+		},
+		alMover: (d, e) => {
+			x = x0 + d;
+			const dt = (e.timeStamp - tPrevio) / 1000;
+			if (dt > 0) v = v * 0.5 + ((e.clientX - previo) / dt) * 0.5; // velocidad suavizada
+			previo = e.clientX;
+			tPrevio = e.timeStamp;
+			pintar();
+		},
+		alSoltar: (_, e, arrastro) => {
+			if (arrastro && e.timeStamp - tPrevio > 90) v = 0; // se detuvo antes de soltar: sin lanzamiento
+			v = Math.max(-4000, Math.min(4000, v));
+		},
+	});
+
+	// ---- Carrusel de imágenes del modal (scroll-snap nativo; flechas y puntos solo si hay más de una) ----
+	const galerias = [...modal.querySelectorAll<HTMLElement>('[data-galeria]')].map((g) => {
+		const pista = g.querySelector<HTMLElement>('.g-pista')!;
+		const puntos = [...g.querySelectorAll<HTMLElement>('.g-punto')];
+		const n = pista.children.length;
+		const actual = () => Math.min(n - 1, Math.max(0, Math.round(pista.scrollLeft / (pista.clientWidth || 1))));
+		const ir = (k: number) =>
+			pista.scrollTo({ left: ((k + n) % n) * pista.clientWidth, behavior: reducido.matches ? 'auto' : 'smooth' });
+		const marcar = () => {
+			const a = actual();
+			puntos.forEach((p, k) => (k === a ? p.setAttribute('aria-current', 'true') : p.removeAttribute('aria-current')));
+		};
+		if (n > 1) {
+			pista.addEventListener('scroll', marcar, { passive: true });
+			g.querySelector('.g-ant')!.addEventListener('click', () => ir(actual() - 1));
+			g.querySelector('.g-sig')!.addEventListener('click', () => ir(actual() + 1));
+			puntos.forEach((p) => p.addEventListener('click', () => ir(Number(p.dataset.k))));
+			pista.addEventListener('keydown', (e) => {
+				if (e.key === 'ArrowLeft') {
+					e.preventDefault();
+					ir(actual() - 1);
+				}
+				if (e.key === 'ArrowRight') {
+					e.preventDefault();
+					ir(actual() + 1);
+				}
+			});
+		}
+		return { pista, marcar };
+	});
+
+	// ---- Modal ----
+	cinta.addEventListener('click', (e) => {
+		const boton = (e.target as HTMLElement).closest<HTMLElement>('.abrir');
+		if (!boton) return;
+		detalles.forEach((d) => (d.hidden = d.dataset.i !== boton.dataset.i));
+		modal.setAttribute('aria-label', detalles[Number(boton.dataset.i)].querySelector('.d-titulo')!.textContent ?? 'Proyecto');
+		modal.showModal();
+		galerias.forEach((g) => {
+			g.pista.scrollLeft = 0; // cada apertura empieza en la portada
+			g.marcar();
+		});
+		modal.scrollTop = 0;
+		modal.querySelector('.caja')!.scrollTop = 0;
+		pausas++;
+	});
+	modal.addEventListener('close', () => (pausas = Math.max(0, pausas - 1)));
+	modal.querySelector('.cerrar')!.addEventListener('click', () => modal.close());
+	modal.addEventListener('click', (e) => e.target === modal && modal.close()); // clic en el fondo
+
+	// ---- Visor de imagen ampliada ----
+	// Se cierra con: la X, un clic fuera de la imagen, Esc, o el botón "atrás" del teléfono
+	// (al abrir se añade una entrada al historial y "atrás" la consume en vez de salir de la página).
+	const visor = document.querySelector<HTMLDialogElement>('#proyecto-visor')!;
+	// la <img> se crea aquí (no en el HTML) para no dejar una etiqueta sin src; se rellena al abrir
+	const visorImg = document.createElement('img');
+	visorImg.className = 'visor-img';
+	visorImg.draggable = false;
+	visor.append(visorImg);
+	let entradaHistorial = false;
+
+	modal.addEventListener('click', (e) => {
+		const boton = (e.target as HTMLElement).closest<HTMLElement>('.g-ampliar');
+		if (!boton) return;
+		const img = boton.querySelector<HTMLImageElement>('img')!;
+		visorImg.alt = img.alt;
+		visorImg.removeAttribute('srcset');
+		if (img.srcset) {
+			visorImg.srcset = img.srcset;
+			visorImg.sizes = '100vw';
+		}
+		visorImg.src = img.currentSrc || img.src;
+		visor.showModal();
+		history.pushState({ visor: true }, '');
+		entradaHistorial = true;
+	});
+
+	visor.addEventListener('close', () => {
+		// la imagen se conserva mientras dura el fundido de salida y se libera después
+		setTimeout(() => {
+			if (!visor.open) visorImg.removeAttribute('src');
+		}, 400);
+		// cerrado con la X, fuera o Esc: se retira la entrada de historial que añadimos
+		if (entradaHistorial) {
+			entradaHistorial = false;
+			history.back();
+		}
+	});
+	// botón "atrás" del teléfono / navegador
+	window.addEventListener('popstate', () => {
+		if (visor.open) {
+			entradaHistorial = false;
+			visor.close();
+		}
+	});
+	visor.querySelector('.visor-cerrar')!.addEventListener('click', () => visor.close());
+	visor.addEventListener('click', (e) => e.target === visor && visor.close()); // clic fuera de la imagen
+</script>
+
+<style>
+	.proyectos {
+		padding-block: 6rem 7rem;
+		scroll-margin-top: 4rem;
+		color: #fff;
+		font-family: 'Saira Semi Condensed', sans-serif;
+	}
+
+	.proyectos {
+		--w: clamp(19rem, 33vw, 40rem);
+		--pad: calc(var(--w) * 0.26); /* aire arriba/abajo: las tarjetas laterales se agrandan con la perspectiva */
+	}
+	@media (max-width: 40rem) {
+		.proyectos {
+			--w: min(86vw, 30rem);
+			--pad: calc(var(--w) * 0.12);
+		}
+	}
+	.encabezado {
+		position: relative;
+		margin-bottom: calc(var(--pad) * -1.1); /* pegado a la tarjeta central */
+		text-align: center;
+		font-size: clamp(3rem, 8vw, 7rem);
+		font-weight: 700;
+		line-height: 1.2; /* Distancia entre titulo y carrusel */
+	}
+
+	/* Borde a borde de la pantalla; el overflow vertical (celular de Celleyes) queda visible */
+	.cinta {
+		width: 100%;
+		padding-block: var(--pad);
+		overflow-x: clip;
+		cursor: grab;
+		touch-action: pan-y;
+	}
+	.pista {
+		display: flex;
+		gap: clamp(0.5rem, 0.8vw, 1rem);
+		width: max-content;
+	}
+	.cinta.arrastrando,
+	.cinta.arrastrando * {
+		cursor: grabbing;
+		user-select: none;
+	}
+
+	.pista-ayuda {
+		margin-top: calc(var(--pad) * -1 + 2rem);
+		text-align: center;
+		font-size: clamp(1rem, 1.6vw, 1.5rem);
+		color: rgb(255 255 255 / 0.4);
+	}
+
+	/* ---------- Modal ---------- */
+	.modal {
+		margin: auto;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		color: #fff;
+		width: min(100% - 2rem, 58rem);
+		max-width: none;
+		max-height: none;
+		overflow: visible;
+		opacity: 0;
+		scale: 0.96;
+		translate: 0 12px;
+		transition:
+			opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+			scale 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+			translate 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+			overlay 0.3s allow-discrete,
+			display 0.3s allow-discrete;
+	}
+	.modal[open] {
+		opacity: 1;
+		scale: 1;
+		translate: 0 0;
+	}
+	@starting-style {
+		.modal[open] {
+			opacity: 0;
+			scale: 0.96;
+			translate: 0 12px;
+		}
+	}
+	.modal::backdrop {
+		background: rgb(0 0 0 / 0.72);
+		backdrop-filter: blur(6px);
+		transition:
+			opacity 0.3s,
+			overlay 0.3s allow-discrete,
+			display 0.3s allow-discrete;
+		opacity: 0;
+	}
+	.modal[open]::backdrop {
+		opacity: 1;
+	}
+	@starting-style {
+		.modal[open]::backdrop {
+			opacity: 0;
+		}
+	}
+
+	/* Altura fija en escritorio: el modal mide lo mismo con textos largos (Geotécnica Jaén) o cortos
+	   (Refugio de Patitas), y el panel de imágenes siempre tiene sitio para fotos horizontales,
+	   cuadradas o verticales. Si el texto no cabe, la columna de texto hace scroll. */
+	.caja {
+		position: relative;
+		height: min(90svh, 46rem);
+		overflow: hidden;
+		border-radius: 1.25rem;
+		background: linear-gradient(160deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.03)), #0c0c0c;
+		border: 1px solid rgb(255 255 255 / 0.16);
+		box-shadow: 0 24px 60px rgb(0 0 0 / 0.6);
+	}
+	.cerrar {
+		position: absolute;
+		top: 0.75rem;
+		right: 0.75rem;
+		z-index: 2;
+		display: grid;
+		place-items: center;
+		width: 2.5rem;
+		height: 2.5rem;
+		border-radius: 999px;
+		background: rgb(0 0 0 / 0.55);
+		border: 1px solid rgb(255 255 255 / 0.25);
+		color: #fff;
+		cursor: pointer;
+		transition: background 0.2s, transform 0.2s;
+	}
+	.cerrar:hover {
+		background: #fff;
+		color: #000;
+	}
+	.cerrar:focus-visible {
+		outline: 2px solid #fff;
+		outline-offset: 2px;
+	}
+	.cerrar:active {
+		transform: scale(0.92);
+	}
+
+	.detalle {
+		display: grid;
+		grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr);
+		height: 100%;
+	}
+	/* Sin imágenes: solo el texto, en una columna y con la altura que pida */
+	.detalle.sin-media {
+		grid-template-columns: minmax(0, 1fr);
+		height: auto;
+	}
+	.caja:has(.detalle.sin-media:not([hidden])) {
+		height: auto;
+		max-height: min(90svh, 46rem);
+		overflow-y: auto;
+	}
+	.detalle[hidden] {
+		display: none;
+	}
+	/* Mismo degradado que la tarjeta, con el color del proyecto */
+	.media {
+		position: relative;
+		min-height: 0;
+		overflow: hidden;
+		border-radius: 1.25rem 0 0 1.25rem;
+	}
+	.media::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(90deg, var(--color) 26%, #000 100%);
+		opacity: 0.4;
+	}
+	.galeria {
+		position: absolute;
+		inset: 0;
+	}
+	.g-pista {
+		display: flex;
+		height: 100%;
+		overflow-x: auto;
+		scroll-snap-type: x mandatory;
+		overscroll-behavior-x: contain;
+		scrollbar-width: none;
+	}
+	.g-pista::-webkit-scrollbar {
+		display: none;
+	}
+	.g-pista:focus-visible {
+		outline: 2px solid #fff;
+		outline-offset: -4px;
+	}
+	/* Cada imagen cabe entera en el recuadro (object-fit: contain), sea horizontal, cuadrada o vertical */
+	.g-slide {
+		flex: 0 0 100%;
+		height: 100%;
+		min-width: 0;
+		box-sizing: border-box;
+		padding: 2rem;
+		scroll-snap-align: center;
+		scroll-snap-stop: always;
+	}
+	.galeria:has(.g-puntos) .g-slide {
+		padding-bottom: 3.25rem; /* sitio para los puntos */
+	}
+	.media :global(img) {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		filter: drop-shadow(0 14px 18px rgb(0 0 0 / 0.6));
+		user-select: none;
+	}
+	.g-ampliar {
+		display: block;
+		width: 100%;
+		height: 100%;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		cursor: zoom-in;
+	}
+	.g-ampliar:focus-visible {
+		outline: 2px solid #fff;
+		outline-offset: 2px;
+		border-radius: 0.5rem;
+	}
+	.g-flecha {
+		position: absolute;
+		top: 50%;
+		translate: 0 -50%;
+		z-index: 1;
+		display: grid;
+		place-items: center;
+		width: 2.5rem;
+		height: 2.5rem;
+		border-radius: 999px;
+		background: rgb(0 0 0 / 0.55);
+		border: 1px solid rgb(255 255 255 / 0.25);
+		color: #fff;
+		cursor: pointer;
+		transition: background 0.2s, color 0.2s, scale 0.2s;
+	}
+	.g-ant {
+		left: 0.75rem;
+	}
+	.g-sig {
+		right: 0.75rem;
+	}
+	.g-flecha:hover {
+		background: #fff;
+		color: #000;
+	}
+	.g-flecha:active {
+		scale: 0.92;
+	}
+	.g-flecha:focus-visible,
+	.g-punto:focus-visible {
+		outline: 2px solid #fff;
+		outline-offset: 2px;
+	}
+	.g-puntos {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 1rem;
+		display: flex;
+		justify-content: center;
+		gap: 0.2rem;
+	}
+	/* Botón de 1.5rem para que sea fácil de tocar; el punto visible es el ::before */
+	.g-punto {
+		display: grid;
+		place-items: center;
+		width: 1.5rem;
+		height: 1.5rem;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		cursor: pointer;
+	}
+	.g-punto::before {
+		content: '';
+		width: 0.55rem;
+		height: 0.55rem;
+		border-radius: 999px;
+		background: rgb(255 255 255 / 0.4);
+		transition: width 0.25s, background 0.25s;
+	}
+	.g-punto[aria-current='true']::before {
+		width: 1.4rem;
+		background: #fff;
+	}
+	.texto {
+		min-height: 0;
+		overflow-y: auto;
+		scrollbar-width: thin;
+		scrollbar-color: rgb(255 255 255 / 0.3) transparent;
+		padding: 2.25rem 2rem 2rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.9rem;
+	}
+	.d-titulo {
+		font-size: clamp(2rem, 4vw, 2.75rem);
+		font-weight: 700;
+		line-height: 1.05;
+		padding-right: 2.5rem;
+	}
+	.d-meta {
+		color: rgb(255 255 255 / 0.62);
+		font-size: 1.05rem;
+	}
+	.d-desc {
+		font-size: 1.1rem;
+		line-height: 1.6;
+		max-width: 65ch;
+	}
+	.texto h4 {
+		margin-top: 0.4rem;
+		font-size: 1rem;
+		font-weight: 700;
+	}
+	.d-stack {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+	.etiqueta {
+		padding: 0.15rem 0.85rem;
+		border-radius: 999px;
+		font-size: 0.95rem;
+	}
+	.d-botones {
+		margin-top: 0.6rem;
+		font-size: 1.05rem;
+	}
+
+	@media (max-width: 46rem) {
+		.detalle {
+			grid-template-columns: 1fr;
+		}
+		/* Móvil: el modal crece con el texto y todo el recuadro hace scroll; el panel de imágenes
+		   mantiene una altura fija para que quepan imágenes verticales sin tapar el texto */
+		.caja,
+		.caja:has(.detalle.sin-media:not([hidden])) {
+			height: auto;
+			max-height: 90svh;
+			overflow-y: auto;
+		}
+		.detalle {
+			height: auto;
+		}
+		.media {
+			border-radius: 1.25rem 1.25rem 0 0;
+			height: clamp(16rem, 48svh, 24rem);
+		}
+		.g-slide {
+			padding: 1.25rem;
+		}
+		.galeria:has(.g-puntos) .g-slide {
+			padding-bottom: 2.75rem;
+		}
+		.g-flecha {
+			width: 2.25rem;
+			height: 2.25rem;
+		}
+		.g-ant {
+			left: 0.5rem;
+		}
+		.g-sig {
+			right: 0.5rem;
+		}
+		.g-puntos {
+			bottom: 0.6rem;
+		}
+		.texto {
+			overflow: visible;
+			padding: 1.5rem 1.25rem 1.5rem;
+		}
+		.d-titulo {
+			padding-right: 0;
+		}
+	}
+
+	/* ---------- Visor de imagen (pantalla completa, estilo Discord) ---------- */
+	.visor {
+		width: 100vw;
+		height: 100svh;
+		max-width: none;
+		max-height: none;
+		margin: 0;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		color: #fff;
+		opacity: 0;
+		transition:
+			opacity 0.25s ease,
+			overlay 0.25s allow-discrete,
+			display 0.25s allow-discrete;
+	}
+	/* place-items va en la base (no solo en [open]): durante el fundido de salida el diálogo ya no tiene
+	   [open] y, si el centrado dependiera de él, la imagen saltaba a la esquina antes de desvanecerse */
+	.visor {
+		place-items: center;
+	}
+	.visor[open] {
+		display: grid;
+		opacity: 1;
+	}
+	@starting-style {
+		.visor[open] {
+			opacity: 0;
+		}
+	}
+	/* El fondo oscuro se desvanece junto con la imagen (antes desaparecía de golpe) */
+	.visor::backdrop {
+		background: rgb(0 0 0 / 0.9);
+		backdrop-filter: blur(8px);
+		opacity: 0;
+		transition:
+			opacity 0.25s ease,
+			overlay 0.25s allow-discrete,
+			display 0.25s allow-discrete;
+	}
+	.visor[open]::backdrop {
+		opacity: 1;
+	}
+	@starting-style {
+		.visor[open]::backdrop {
+			opacity: 0;
+		}
+	}
+	.visor :global(.visor-img) {
+		max-width: min(96vw, 100% - 1rem);
+		max-height: 92svh;
+		width: auto;
+		height: auto;
+		object-fit: contain;
+		border-radius: 0.5rem;
+		box-shadow: 0 20px 60px rgb(0 0 0 / 0.6);
+		cursor: default;
+		user-select: none;
+		scale: 0.94;
+		transition: scale 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+	}
+	.visor[open] :global(.visor-img) {
+		scale: 1;
+	}
+	@starting-style {
+		.visor[open] :global(.visor-img) {
+			scale: 0.94;
+		}
+	}
+	.visor-cerrar {
+		position: absolute;
+		top: max(0.75rem, env(safe-area-inset-top));
+		right: max(0.75rem, env(safe-area-inset-right));
+		z-index: 1;
+		display: grid;
+		place-items: center;
+		width: 2.75rem;
+		height: 2.75rem;
+		border-radius: 999px;
+		background: rgb(0 0 0 / 0.6);
+		border: 1px solid rgb(255 255 255 / 0.3);
+		color: #fff;
+		cursor: pointer;
+		transition: background 0.2s, color 0.2s;
+	}
+	.visor-cerrar:hover {
+		background: #fff;
+		color: #000;
+	}
+	.visor-cerrar:focus-visible {
+		outline: 2px solid #fff;
+		outline-offset: 2px;
+	}
+
+	:global(html:has(dialog[open])) {
+		overflow: hidden;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.modal,
+		.modal::backdrop {
+			transition: none;
+			scale: 1;
+			translate: 0 0;
+		}
+		.cerrar,
+		.g-flecha,
+		.g-punto::before,
+		.visor,
+		.visor::backdrop,
+		.visor :global(.visor-img),
+		.visor-cerrar {
+			transition: none;
+		}
+	}
+</style>

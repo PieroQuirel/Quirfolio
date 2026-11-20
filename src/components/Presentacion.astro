@@ -1,0 +1,385 @@
+---
+import { Image } from "astro:assets";
+import foto from "../images/FotoPiero.png";
+import correo from "../images/icons/correo logo blanco.png";
+import linkedin from "../images/icons/linkedin logo blanco.png";
+import github from "../images/icons/github logo blanco.png";
+import copiar from "../images/icons/copiar logo blanco.png";
+import pdf from "../images/icons/pdf logo blanco.png";
+import descargar from "../images/icons/descargar logo blanco.png";
+// El CV vive en src/assets; ?url lo publica con su ruta final
+import cvUrl from "../assets/PIERO QUIROZ CORONEL CV.pdf?url";
+import "@fontsource-variable/saira/wdth.css"; // el título; Saira Semi Condensed ya la carga Layout.astro
+import { UI, getLang } from "../i18n/ui";
+import { CORREO } from "../data/contacto";
+
+const t = UI[getLang(Astro.url)].pres;
+
+const CV_NOMBRE = "PIERO QUIROZ CORONEL CV.pdf";
+// El correo no se escribe completo en el HTML (antispam): lleva usuario y dominio y el script los une al cargar.
+// Al copiar se copia `href` (el correo, en su caso); el CV no copia: lleva el botón de descarga.
+const contactos = [
+	{ nombre: t.correo, icono: correo, usuario: CORREO.usuario, dominio: CORREO.dominio },
+	{
+		nombre: "Linkedin",
+		icono: linkedin,
+		texto: "linkedin.com/in/piero-quiroz/",
+		href: "https://www.linkedin.com/in/piero-quiroz/",
+		inicial: true,
+	},
+	{ nombre: "Github", icono: github, texto: "github.com/PieroQuirel", href: "https://github.com/PieroQuirel" },
+	{ nombre: t.curriculum, icono: pdf, texto: CV_NOMBRE, href: cvUrl, cv: true },
+];
+const inicial = contactos.find((c) => c.inicial) ?? contactos[0];
+---
+
+<section class="presentacion" id="inicio">
+	<h1 class="titulo sm:mb-20">
+		<span class="cargo aparece" style="--n:0">Full Stack Developer</span>
+		<span class="nombre aparece" style="--n:1">Piero Quiroz</span>
+		<span class="portafolio aparece" style="--n:2">{t.portafolio}</span>
+	</h1>
+
+	<div class="sobre-mi aparece" style="--n:3">
+		<h2>{t.sobreMi}</h2>
+		<p>
+			{t.sobreTexto}
+			<span class="lugar">{t.lugar}</span>
+		</p>
+		<Image
+			class="foto"
+			src={foto}
+			alt={t.fotoAlt}
+			widths={[320, 640]}
+			sizes="(min-width: 768px) 320px, 70vw"
+			loading="eager"
+		/>
+	</div>
+
+	<div
+		class="contacto aparece"
+		style="--n:5"
+		data-contactos
+		data-t-copiado={t.copiado}
+		data-t-no-copiado={t.noCopiado}
+		data-t-descargado={t.descargado}
+	>
+		<div class="botones" role="group" aria-label={t.medios}>
+			{
+				contactos.map((c) => (
+					<button
+						type="button"
+						class="boton-contacto"
+						aria-label={c.nombre}
+						aria-pressed={c === inicial}
+						data-texto={c.texto}
+						data-href={c.href}
+						data-usuario={c.usuario}
+						data-dominio={c.dominio}
+						data-cv={c.cv ? "" : undefined}
+					>
+						<img src={c.icono.src} alt="" width="34" height="34" />
+					</button>
+				))
+			}
+		</div>
+
+		<p class="etiqueta" id="contacto-nombre">{inicial.nombre}</p>
+		<div class="barra vidrio">
+			<a id="contacto-enlace" href={inicial.href} target="_blank" rel="noopener noreferrer">{inicial.texto}</a>
+			<span id="contacto-aviso" class="aviso" role="status"></span>
+			<button
+				type="button"
+				id="contacto-copiar"
+				class="copiar"
+				aria-label={t.copiarAria}
+			>
+				<img src={copiar.src} alt="" width="26" height="26" />
+			</button>
+			<button
+				type="button"
+				id="contacto-descargar"
+				class="copiar"
+				aria-label={t.descargarAria}
+				title={t.descargarAria}
+				hidden
+			>
+				<img src={descargar.src} alt="" width="26" height="26" />
+			</button>
+		</div>
+	</div>
+</section>
+
+<script>
+	import { iniciarContactos } from "../scripts/presentacion";
+
+	const raiz = document.querySelector<HTMLElement>("[data-contactos]");
+	if (raiz) iniciarContactos(raiz);
+</script>
+
+<style>
+	.presentacion {
+		container-type: inline-size;
+		width: min(100% - 2rem, 69rem);
+		min-height: 100svh;
+		margin-inline: auto;
+		padding-block: 7rem 4rem;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		scroll-margin-top: 6rem;
+		color: #fff;
+	}
+
+	/* Fade-in escalonado al cargar */
+	.aparece {
+		animation: aparece 1.1s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+		animation-delay: calc(0.15s + var(--n) * 0.18s);
+	}
+	@keyframes aparece {
+		from {
+			opacity: 0;
+			filter: blur(6px);
+			translate: 0 14px;
+		}
+	}
+
+	/* Título */
+	.titulo {
+		display: grid;
+		grid-template-columns: auto auto;
+		justify-content: center;
+		grid-template-areas: "cargo portafolio" "nombre portafolio";
+		column-gap: 0.8cqw;
+		align-items: center;
+		font-family: "Saira Variable", sans-serif;
+		line-height: 1;
+	}
+	.cargo {
+		grid-area: cargo;
+		font-size: 8.4cqw;
+		font-weight: 300;
+		transform-origin: bottom center;
+		transform: perspective(32cqw) rotateX(36deg) scaleY(1.2); /* trapecio tipo créditos de Star Wars */
+		font-stretch: 125%;
+		white-space: nowrap;
+	}
+	.nombre {
+		grid-area: nombre;
+		margin-top: -1cqw;
+		font-size: 15.4cqw;
+		font-weight: 800;
+		font-stretch: 87%;
+		text-transform: uppercase;
+		white-space: nowrap;
+		letter-spacing: -0.02em;
+		clip-path: inset(
+			0.05em -0.05em 0.01em -0.05em
+		); /* recorta la selección a mayúsculas + cola de la Q */
+	}
+	.portafolio {
+		grid-area: portafolio;
+		margin-left: -1.5cqw;
+		writing-mode: vertical-rl;
+		font-size: 4cqw;
+		font-weight: 300;
+		font-stretch: 110%;
+	}
+
+	/* Tarjeta Sobre Mi */
+	.sobre-mi {
+		position: relative;
+		width: 68%;
+		margin: 7cqw auto 0;
+		padding: 2.4cqw 29% 2.4cqw 5.2cqw;
+		display: flex;
+		align-items: center;
+		gap: 1.4cqw;
+		border-radius: 1.4rem;
+		background: linear-gradient(
+			100deg,
+			#414141 0%,
+			#232323 55%,
+			#000000 100%
+		);
+	}
+	.sobre-mi h2 {
+		writing-mode: vertical-rl;
+		rotate: 180deg;
+		font-size: 3.2cqw;
+		font-weight: 700;
+		line-height: 1;
+		white-space: nowrap;
+	}
+	.sobre-mi p {
+		font-size: 1.62cqw;
+		line-height: 1.7;
+		font-weight: 400;
+		text-align: justify;
+	}
+	.lugar {
+		display: block;
+	}
+	.sobre-mi :global(.foto) {
+		position: absolute;
+		right: 0;
+		bottom: 0;
+		width: 40.3%;
+		height: auto;
+		clip-path: inset(0 round 0 0 1.4rem 0);
+	}
+
+	/* Botones de contacto */
+	.contacto {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		margin-top: 3.4cqw;
+	}
+	.botones {
+		display: flex;
+		gap: 0.9cqw;
+	}
+	.boton-contacto {
+		display: grid;
+		place-items: center;
+		width: clamp(3rem, 5.8cqw, 3.75rem);
+		aspect-ratio: 1;
+		border-radius: 1.05rem;
+		background: linear-gradient(160deg, #2c2c2c, #0d0d0d);
+		border: 1px solid rgb(255 255 255 / 0.1);
+		box-shadow:
+			0 4px 12px rgb(0 0 0 / 0.55),
+			inset 0 1px 0 rgb(255 255 255 / 0.12);
+		cursor: pointer;
+		transition:
+			background 0.3s,
+			transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	.boton-contacto img {
+		width: 75%;
+		height: 75%;
+		object-fit: contain;
+		transition: filter 0.3s;
+	}
+	.boton-contacto:hover {
+		transform: translateY(-3px);
+	}
+	.boton-contacto:active {
+		transform: translateY(0) scale(0.96);
+	}
+	.boton-contacto[aria-pressed="true"] {
+		background: #fff;
+	}
+	.boton-contacto[aria-pressed="true"] img {
+		filter: invert(1);
+	} /* PNG blanco → negro */
+
+	.etiqueta {
+		margin-top: 2.6cqw;
+		font:
+			700 clamp(0.9rem, 1.55cqw, 1.05rem) "Saira Semi Condensed",
+			sans-serif;
+	}
+
+	/* Barra vidrio con el enlace */
+	.barra {
+		display: flex;
+		align-items: center;
+		/* Altura fija: igual en todos los contactos (el icono de descargar es más bajo que el de copiar) */
+		height: 3.4rem;
+		box-sizing: border-box;
+		gap: 0.75rem;
+		width: min(100%, 37rem);
+		margin-top: 0.35rem;
+		padding: 0.5rem 0.9rem 0.5rem 1.25rem;
+		border-radius: 999px;
+		font-size: clamp(1rem, 2.1cqw, 1.4rem);
+	}
+	.barra a {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.barra a:hover {
+		text-decoration: underline;
+		text-underline-offset: 4px;
+	}
+	.aviso {
+		font-size: 0.85em;
+		color: var(--papel-tenue);
+	}
+	.copiar {
+		display: grid;
+		place-items: center;
+		flex: none;
+		width: 2.3rem;
+		height: 2.3rem;
+		padding: 0.2rem;
+		border-radius: 0.5rem;
+		cursor: pointer;
+		transition: transform 0.2s;
+	}
+	.copiar[hidden] {
+		display: none;
+	}
+	.copiar:hover {
+		transform: scale(1.12);
+	}
+	.copiar:active {
+		transform: scale(0.92);
+	}
+
+	/* Móvil: tarjeta apilada */
+	@container (max-width: 40rem) {
+		.sobre-mi {
+			width: 100%;
+			margin-top: 34cqw;
+			padding: 0 1.5rem 1.75rem;
+			flex-direction: column;
+			align-items: stretch;
+			gap: 0.9rem;
+		}
+		/* Foto en el flujo: sobresale por arriba y sus hombros se funden con la tarjeta */
+		.sobre-mi :global(.foto) {
+			position: static;
+			order: -1;
+			align-self: center;
+			width: 64%;
+			margin-top: -34cqw;
+			clip-path: none;
+			mask-image: linear-gradient(#000 78%, transparent);
+		}
+		.sobre-mi h2 {
+			writing-mode: horizontal-tb;
+			rotate: none;
+			font-size: 1.9rem;
+			text-align: center;
+			margin-top: -0.5rem;
+		}
+		.sobre-mi p {
+			font-size: 1.05rem;
+			line-height: 1.6;
+			text-align: left;
+			hyphens: manual;
+		}
+		.boton-contacto {
+			width: 3.25rem;
+		}
+		.botones {
+			gap: 0.6rem;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.aparece {
+			animation: none;
+		}
+		.boton-contacto,
+		.copiar {
+			transition: none;
+		}
+	}
+</style>

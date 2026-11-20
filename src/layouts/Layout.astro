@@ -1,59 +1,194 @@
 ---
 import "../styles/tailwind.css";
+import "../styles/retro.css";
 import Header from "@components/Header.astro";
+import FondoFluido from "@components/FondoFluido.astro";
+import '@fontsource/saira-semi-condensed/400.css';
 import '@fontsource/saira-semi-condensed/500.css';
+import '@fontsource/saira-semi-condensed/700.css';
+import { UI, IDIOMAS, SITIO, rutaIdioma, getLang, type Lang } from '../i18n/ui';
+
+interface Props {
+	lang?: Lang;
+	title?: string;
+	description?: string;
+	image?: string;
+	base?: string; // prefijo de los enlaces del header (páginas sin secciones, como la 404)
+	noindex?: boolean; // páginas que no deben indexarse (404)
+}
+
+const lang = Astro.props.lang ?? getLang(Astro.url);
+const t = UI[lang];
+const {
+	title = t.seo.titulo,
+	description = t.seo.descripcion,
+	image = '/og-default.jpg',
+} = Astro.props;
+
+// URLs absolutas: WhatsApp, LinkedIn, Facebook, etc. no resuelven rutas relativas.
+// Cada idioma tiene su propia URL canónica (/ y /en/) y se enlazan entre sí con hreflang.
+const canonica = new URL(rutaIdioma(lang), SITIO).href;
+const urlDe = (l: Lang) => new URL(rutaIdioma(l), SITIO).href;
+const imagenAbsoluta = new URL(image, SITIO).href;
+const otroIdioma = IDIOMAS.find((l) => l !== lang)!;
+
+const datosEstructurados = {
+	'@context': 'https://schema.org',
+	'@graph': [
+		{
+			'@type': 'Person',
+			'@id': `${canonica}#persona`,
+			name: 'Piero Quiroz',
+			url: canonica,
+			image: imagenAbsoluta,
+			jobTitle: t.seo.puesto,
+			description,
+			address: { '@type': 'PostalAddress', addressLocality: 'Lima', addressCountry: t.seo.pais },
+			sameAs: ['https://www.linkedin.com/in/piero-quiroz/', 'https://github.com/PieroQuirel'],
+			knowsAbout: ['React', 'Next.js', 'Laravel', 'Flutter', 'Astro', 'Tailwind CSS', 'Angular', 'Django', 'Spring Boot', 'PostgreSQL', 'UI/UX'],
+		},
+		{
+			'@type': 'WebSite',
+			'@id': `${canonica}#sitio`,
+			url: canonica,
+			name: t.seo.sitio,
+			inLanguage: lang === 'en' ? 'en' : 'es-PE',
+			author: { '@id': `${canonica}#persona` },
+		},
+	],
+};
 ---
 
 <!doctype html>
-<html lang="es">
+<html lang={t.html}>
 	<head>
 		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="description" content="Piero Quiroz crea aplicaciones web y móviles con creatividad"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<meta name="author" content="Piero Quiroz" />
+		<meta name="robots" content={Astro.props.noindex ? 'noindex, follow' : 'index, follow, max-image-preview:large'} />
+		<meta name="theme-color" content="#000000" />
+		{!Astro.props.noindex && <link rel="canonical" href={canonica} />}
+		<link rel="icon" href="/favicon.ico" sizes="any" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+		<link rel="manifest" href="/site.webmanifest" />
+		<link rel="sitemap" href="/sitemap.xml" />
+
+		<!-- Versiones por idioma: Google muestra cada una a quien corresponde -->
+		{!Astro.props.noindex && IDIOMAS.map((l) => <link rel="alternate" hreflang={l} href={urlDe(l)} />)}
+		{!Astro.props.noindex && <link rel="alternate" hreflang="x-default" href={urlDe('es')} />}
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 		<meta name="generator" content={Astro.generator} />
-		<title>Portafolio de Piero Quiroz</title>
+
+		<!-- Vista previa de enlace: Open Graph (WhatsApp, Facebook, LinkedIn, Telegram, Discord, Slack…) -->
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="Piero Quiroz" />
+		<meta property="og:locale" content={t.ogLocale} />
+		<meta property="og:locale:alternate" content={UI[otroIdioma].ogLocale} />
+		<meta property="og:url" content={canonica} />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:image" content={imagenAbsoluta} />
+		<meta property="og:image:secure_url" content={imagenAbsoluta} />
+		<meta property="og:image:type" content="image/jpeg" />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta property="og:image:alt" content={t.seo.imagenAlt} />
+
+		<!-- X / Twitter -->
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
+		<meta name="twitter:image" content={imagenAbsoluta} />
+		<meta name="twitter:image:alt" content={t.seo.imagenAlt} />
+
+		<!-- Datos estructurados para Google (persona + sitio) -->
+		<script type="application/ld+json" set:html={JSON.stringify(datosEstructurados)} />
+		<!-- Al recargar, empezar siempre arriba: el navegador restauraba el scroll antes de que las secciones (reveal) tuvieran su altura real y caía en otra sección -->
+		<script is:inline>
+			if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+		</script>
+		<noscript><style>.reveal { display: block !important; opacity: 1 !important; }</style></noscript>
 	</head>
 
-	<body class="bg-neutral-950">
-  	<div class="relative min-h-screen">
-    <div class="absolute inset-0 z-[-2] bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(250,120,120,0.3),rgba(255,255,255,0))]"></div>
+	<body>
+		<!-- Fondo: degradado de respaldo + shader fluido animado (con grano y viñeta propios) -->
+		<div class="bg-layer bg-marble" aria-hidden="true"></div>
+		<FondoFluido />
 
-    <Header />
-    <slot />
-  	</div>
-</body>
+		<Header base={Astro.props.base} />
+		<slot />
+
+		<script>
+			import Lenis from 'lenis';
+
+			const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+			// Recarga sin #ancla → al inicio (con #ancla, el navegador va a esa sección)
+			if (!location.hash) window.scrollTo(0, 0);
+
+			// Scroll suave
+			let lenis: Lenis | null = null;
+			if (!reduce) {
+				lenis = new Lenis({ lerp: 0.08, smoothWheel: true });
+				const raf = (t: number) => { lenis!.raf(t); requestAnimationFrame(raf); };
+				requestAnimationFrame(raf);
+			}
+
+			// Las secciones se "revelan" (display:none → visible) al pasar por ellas, así que su altura real
+			// aparece durante el viaje y la posición del destino cambia. Se recalcula en cada fotograma
+			// hasta llegar; si la persona gira la rueda o toca la pantalla, se cancela.
+			let viaje = 0;
+			const irA = (target: HTMLElement) => {
+				const id = ++viaje;
+				const destino = () => Math.max(0, target.getBoundingClientRect().top + window.scrollY - 90);
+				lenis!.scrollTo(destino());
+				const inicio = performance.now();
+				const vigila = () => {
+					if (id !== viaje || performance.now() - inicio > 6000) return;
+					const y = destino();
+					if (Math.abs(y - lenis!.targetScroll) > 2) lenis!.scrollTo(y);
+					else if (!lenis!.isScrolling && Math.abs(y - window.scrollY) <= 2) return;
+					requestAnimationFrame(vigila);
+				};
+				requestAnimationFrame(vigila);
+			};
+			['wheel', 'touchstart', 'keydown'].forEach((ev) =>
+				window.addEventListener(ev, () => { viaje++; }, { passive: true }),
+			);
+
+			document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]').forEach((a) => {
+				a.addEventListener('click', (e) => {
+					const target = document.querySelector(a.getAttribute('href')!);
+					if (!target) return;
+					e.preventDefault();
+					if (lenis) irA(target as HTMLElement);
+					else target.scrollIntoView({ behavior: 'auto' });
+				});
+			});
+
+			// Reveal con @starting-style: al entrar al viewport se quita display:none
+			const hosts = document.querySelectorAll<HTMLElement>('.reveal-host');
+			const io = new IntersectionObserver((entries) => {
+				entries.forEach((entry) => {
+					if (!entry.isIntersecting) return;
+					entry.target.querySelector('.reveal')?.setAttribute('data-visible', '');
+					io.unobserve(entry.target);
+				});
+			}, { threshold: 0.01, rootMargin: '0px 0px -12% 0px' });
+			hosts.forEach((h) => io.observe(h));
+
+			// Entrada con #ancla (p. ej. al cambiar de idioma): las secciones aún están plegadas,
+			// así que se viaja con el mismo recálculo por fotograma en vez de confiar en el salto del navegador
+			if (location.hash) {
+				const destino = document.querySelector<HTMLElement>(location.hash);
+				if (destino) {
+					window.scrollTo(0, 0);
+					requestAnimationFrame(() => (lenis ? irA(destino) : destino.scrollIntoView({ behavior: 'auto' })));
+				}
+			}
+		</script>
+	</body>
 </html>
-
-<style is:global>
-
-	:root {
-		color-scheme: light dark;
-	}
-
-	html {
-		font-family: 'Saira Semi Condensed', sans-serif;
-		scroll-behavior: smooth;
-	}
-
-	body {
-		display: flex;
-		flex-direction: column;
-		min-height: 100vh;
-		color: #fff;
-
-		background-color: #000;
-		background-image:
-		linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.6)),
-		url("/src/images/binding-dark.png");
-		background-repeat: repeat;
-		background-size: auto;
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		html {
-			scroll-behavior: auto;
-		}
-	}
-
-</style>

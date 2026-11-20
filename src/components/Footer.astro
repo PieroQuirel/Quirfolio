@@ -1,0 +1,372 @@
+---
+/**
+ * Footer ligero: sin marco ni panel, directamente sobre el fondo del sitio.
+ * Una línea fina lo separa del contenido; el correo es el protagonista y la
+ * navegación son enlaces de texto con una barrita (guiño a las barras de las cartas).
+ * Datos de contacto: edítalos en CONTACTO. Enlaces: en SECCIONES.
+ */
+import '@fontsource/saira-semi-condensed/400.css';
+import '@fontsource/saira-semi-condensed/700.css';
+import copiarIcono from '../images/icons/copiar logo blanco.png';
+import linkedinIcono from '../images/icons/linkedin logo blanco.png';
+import githubIcono from '../images/icons/github logo blanco.png';
+import mundoIcono from '../images/icons/www icono blanco.png';
+import pdfIcono from '../images/icons/pdf logo blanco.png';
+// El CV vive en src/assets; ?url lo publica con su ruta final
+import cvUrl from '../assets/PIERO QUIROZ CORONEL CV.pdf?url';
+import { UI, getLang } from '../i18n/ui';
+import { CORREO } from '../data/contacto';
+
+const { foot: t, pres } = UI[getLang(Astro.url)];
+
+const CONTACTO = {
+	linkedin: 'https://www.linkedin.com/in/piero-quiroz/',
+	github: 'https://github.com/PieroQuirel',
+	ubicacion: t.ubicacion,
+};
+
+const SECCIONES = [
+	{ texto: t.inicio, href: '#inicio' },
+	{ texto: t.experiencia, href: '#experiencia' },
+	{ texto: t.proyectos, href: '#proyectos' },
+	{ texto: t.habilidades, href: '#habilidades' },
+];
+
+const REDES = [
+	{ texto: 'LinkedIn', href: CONTACTO.linkedin, icono: linkedinIcono },
+	{ texto: 'GitHub', href: CONTACTO.github, icono: githubIcono },
+	{ texto: pres.curriculum, href: cvUrl, icono: pdfIcono }, // abre el PDF en otra pestaña
+];
+
+const anio = new Date().getFullYear();
+---
+
+<footer class="pie reveal-host" id="contacto">
+	<div class="reveal from-bottom">
+		<div class="cuerpo">
+			<div class="contacto">
+				<h2 class="titular">{t.titular}</h2>
+				<p class="bajada">{t.bajada}</p>
+
+				<div class="correo">
+					<a class="correo-enlace" href="#" data-usuario={CORREO.usuario} data-dominio={CORREO.dominio}>{CORREO.usuario} (arroba) {CORREO.dominio}</a>
+					<button
+						type="button"
+						class="copiar"
+						data-copiar=""
+						data-t-copiar={t.copiar}
+						data-t-copiado={t.copiado}
+						data-t-error={t.noCopiado}
+						data-t-aviso={t.avisoCopiado}
+					>
+						<img src={copiarIcono.src} alt="" width="16" height="16" />
+						<span class="copiar-texto">{t.copiar}</span>
+					</button>
+				</div>
+				<p class="sr-only" aria-live="polite" data-aviso></p>
+			</div>
+
+			<div class="enlaces">
+				<nav aria-label={t.secciones}>
+					<ul>
+						{
+							SECCIONES.map((s) => (
+								<li>
+									<a class="enlace" href={s.href}>{s.texto}</a>
+								</li>
+							))
+						}
+					</ul>
+				</nav>
+				<ul aria-label={t.redes}>
+					{
+						REDES.map((r) => (
+							<li>
+								<a class="enlace" href={r.href} target="_blank" rel="noopener noreferrer">
+									<img src={r.icono.src} alt="" width="16" height="16" />
+									{r.texto}
+								</a>
+							</li>
+						))
+					}
+				</ul>
+			</div>
+		</div>
+
+		<div class="tira">
+			<p>&copy; {anio} Piero Quiroz</p>
+			<p class="ubicacion">
+				<img src={mundoIcono.src} alt="" width="14" height="14" />
+				{CONTACTO.ubicacion}
+			</p>
+			<a class="arriba" href="#inicio">
+				{t.arriba}
+				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"></path></svg>
+			</a>
+		</div>
+	</div>
+</footer>
+
+<script>
+	import { copiarTexto, retardo, unirCorreo } from '../scripts/contacto';
+
+	// Une el correo al cargar (en el HTML publicado no aparece completo, para que los bots no lo recolecten)
+	document.querySelectorAll<HTMLAnchorElement>('.correo-enlace[data-usuario]').forEach((a) => {
+		const correo = unirCorreo(a.dataset);
+		a.href = `mailto:${correo}`;
+		a.textContent = correo;
+		const copiar = a.closest('.correo')?.querySelector<HTMLButtonElement>('[data-copiar]');
+		if (copiar) copiar.dataset.copiar = correo;
+	});
+
+	// Copiar el correo: el botón confirma con "Copiado" y se anuncia a lectores de pantalla
+	document.querySelectorAll<HTMLButtonElement>('[data-copiar]').forEach((b) => {
+		const texto = b.querySelector<HTMLElement>('.copiar-texto')!;
+		const aviso = b.closest('.contacto')?.querySelector<HTMLElement>('[data-aviso]');
+		const restablecer = retardo(2000);
+		b.addEventListener('click', async () => {
+			if (await copiarTexto(b.dataset.copiar ?? '')) {
+				texto.textContent = b.dataset.tCopiado ?? '';
+				b.classList.add('hecho');
+				if (aviso) aviso.textContent = b.dataset.tAviso ?? '';
+			} else {
+				texto.textContent = b.dataset.tError ?? '';
+			}
+			restablecer(() => {
+				texto.textContent = b.dataset.tCopiar ?? '';
+				b.classList.remove('hecho');
+				if (aviso) aviso.textContent = '';
+			});
+		});
+	});
+</script>
+
+<style>
+	.pie {
+		container-type: inline-size;
+		width: 100%;
+		/* el espacio de arriba va como margen: así el fondo empieza justo en la línea fina */
+		margin-top: clamp(4rem, 7cqw, 8rem);
+		padding: 0 0 1.75rem;
+		color: #fff;
+		font-family: 'Saira Semi Condensed', sans-serif;
+		background: linear-gradient(0deg, rgb(0 0 0), rgb(255 255 255 / 0.1));
+	}
+	/* Mismo ancho que el contenido de Habilidades */
+	.cuerpo,
+	.tira {
+		width: min(100cqw - 2rem, max(72cqw, 60rem));
+		margin-inline: auto;
+	}
+
+	/* ---------- Cuerpo: contacto a la izquierda, enlaces a la derecha ---------- */
+	.cuerpo {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: clamp(2.5rem, 6cqw, 7rem);
+		align-items: end;
+		padding-top: clamp(2.5rem, 4cqw, 4.5rem);
+		border-top: 1px solid rgb(255 255 255 / 0.14);
+	}
+
+	.titular {
+		font-size: clamp(1.9rem, 3.2cqw, 3.6rem);
+		font-weight: 700;
+		line-height: 1.05;
+		text-wrap: balance;
+	}
+	.bajada {
+		max-width: 44ch;
+		margin-top: 0.75rem;
+		font-size: clamp(1rem, 1.2cqw, 1.25rem);
+		line-height: 1.5;
+		color: rgb(255 255 255 / 0.55);
+	}
+
+	/* Correo */
+	.correo {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem 1rem;
+		margin-top: clamp(1.5rem, 2.4cqw, 2.5rem);
+	}
+	.correo-enlace {
+		min-width: 0;
+		overflow-wrap: anywhere;
+		font-size: clamp(1.2rem, 2cqw, 2.1rem);
+		color: #fff;
+		background: linear-gradient(currentColor, currentColor) left bottom / 100% 1px no-repeat,
+			linear-gradient(rgb(255 255 255 / 0.25), rgb(255 255 255 / 0.25)) left bottom / 100% 1px no-repeat;
+		background-size:
+			0% 1px,
+			100% 1px;
+		padding-bottom: 0.1em;
+		transition: background-size 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	.correo-enlace:hover {
+		background-size:
+			100% 1px,
+			100% 1px;
+	}
+
+	/* Botón fino: solo un borde de 1px */
+	.copiar {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4em;
+		padding: 0.3em 0.85em;
+		border: 1px solid rgb(255 255 255 / 0.22);
+		border-radius: 999px;
+		font-size: 0.9rem;
+		color: rgb(255 255 255 / 0.75);
+		cursor: pointer;
+		transition:
+			background 0.2s,
+			border-color 0.2s,
+			color 0.2s,
+			transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	.copiar img {
+		width: 0.95em;
+		height: 0.95em;
+		object-fit: contain;
+		opacity: 0.8;
+	}
+	.copiar:hover {
+		border-color: rgb(255 255 255 / 0.5);
+		color: #fff;
+		transform: scale(1.12);
+	}
+	.copiar.hecho {
+		background: #fff;
+		border-color: #fff;
+		color: #000;
+	}
+	.copiar.hecho img {
+		filter: invert(1);
+		opacity: 1;
+	}
+
+	/* ---------- Enlaces: texto con una barrita que crece en hover ---------- */
+	.enlaces {
+		display: flex;
+		gap: clamp(2rem, 4cqw, 4.5rem);
+	}
+	.enlaces ul {
+		display: flex;
+		flex-direction: column;
+		gap: 0.55rem;
+	}
+	.enlace {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5em;
+		font-size: clamp(1rem, 1.15cqw, 1.2rem);
+		color: rgb(255 255 255 / 0.6);
+		transition:
+			color 0.2s,
+			transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	.enlace::before {
+		content: '';
+		width: 0.7em;
+		height: 0.28em;
+		border-radius: 0.2em;
+		background: rgb(255 255 255 / 0.22);
+		transition: background 0.2s;
+	}
+	/* Solo el enlace señalado avanza (transform no altera el layout: el resto de la fila no se mueve) */
+	.enlace:hover {
+		color: #fff;
+		transform: translateX(0.6em);
+	}
+	.enlace:hover::before {
+		background: #fff;
+	}
+	.enlace img {
+		width: 0.95em;
+		height: 0.95em;
+		object-fit: contain;
+		opacity: 0.7;
+	}
+	.enlace:hover img {
+		opacity: 1;
+	}
+
+	/* ---------- Tira inferior ---------- */
+	.tira {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem 1.5rem;
+		margin-top: clamp(2.5rem, 4cqw, 4rem);
+		font-size: 1rem;
+		color: rgb(255 255 255 / 0.4);
+	}
+	.ubicacion {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4em;
+	}
+	.ubicacion img {
+		opacity: 0.5;
+	}
+	.arriba {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35em;
+		color: rgb(255 255 255 / 0.6);
+		transition: color 0.2s;
+	}
+	.arriba svg {
+		width: 1em;
+		height: 1em;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 2;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	.arriba:hover {
+		color: #fff;
+	}
+	.arriba:hover svg {
+		transform: translateY(-3px);
+	}
+
+	/* Foco visible en blanco (el global es rojo) */
+	.pie a:focus-visible,
+	.pie button:focus-visible {
+		outline: 2px solid #fff;
+		outline-offset: 3px;
+		border-radius: 0.25rem;
+	}
+
+	/* ---------- Pantallas angostas ---------- */
+	@container (max-width: 48rem) {
+		.cuerpo {
+			grid-template-columns: 1fr;
+			align-items: start;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.correo-enlace,
+		.enlace,
+		.enlace::before,
+		.copiar,
+		.arriba svg {
+			transition: none;
+		}
+		.enlace:hover,
+		.copiar:hover {
+			transform: none;
+		}
+		.arriba:hover svg {
+			transform: none;
+		}
+	}
+</style>

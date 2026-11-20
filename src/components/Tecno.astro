@@ -1,10 +1,8 @@
-<a class="
-rounded-md border border-white/20 
-flex flex-col justify-center items-center 
-text-xl gap-x-2 py-1 px-1 bg-white/5 
-hover:scale-110 hover:bg-white/15 transition"
-{...Astro.props}
-target="_blank"
-rel="noopener noreferrer">
+---
+const { i = 0 } = Astro.props;
+const rot = [-3, 2, -1.5, 3, -2.5][i % 5];
+---
+<div class="carta flex flex-col justify-center items-center text-xl py-2 px-2 w-28 text-center font-semibold"
+style={`transform: rotate(${rot}deg)`}>
     <slot />
-</a>
+</div>

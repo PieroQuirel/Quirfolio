@@ -1,0 +1,60 @@
+---
+import webIcono from '../images/icons/www icono blanco.png';
+import githubIcono from '../images/icons/github logo blanco.png';
+
+interface Props {
+	web?: string;
+	github?: string;
+}
+
+const { web, github } = Astro.props;
+const enlaces = [
+	{ href: web, texto: 'Web', icono: webIcono },
+	{ href: github, texto: 'GitHub', icono: githubIcono },
+].filter((e) => e.href);
+---
+
+{
+	enlaces.length > 0 && (
+		<div class="botones">
+			{enlaces.map((e) => (
+				<a class="vidrio pildora" href={e.href} target="_blank" rel="noopener noreferrer">
+					<img src={e.icono.src} alt="" width="22" height="22" draggable="false" />
+					{e.texto}
+				</a>
+			))}
+		</div>
+	)
+}
+
+<style>
+	/* El tamaño lo define quien lo usa (font-size heredado) */
+	.botones {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.6em;
+	}
+	.pildora {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4em;
+		padding: 0.12em 0.75em 0.12em 0.55em;
+		border-radius: 999px;
+		line-height: 1.3;
+		color: #fff;
+		transition: transform 0.2s;
+	}
+	.pildora:hover {
+		transform: translateY(-2px);
+	}
+	.pildora img {
+		width: 1.3em;
+		height: 1.3em;
+		object-fit: contain;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.pildora {
+			transition: none;
+		}
+	}
+</style>

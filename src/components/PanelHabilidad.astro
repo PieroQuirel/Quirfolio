@@ -1,0 +1,744 @@
+---
+/**
+ * Panel de información de una habilidad (se muestra al soltar una carta en el
+ * cuadro grande de Habilidades). Todo el contenido sale de `habilidad`
+ * (src/data/habilidades.ts); las experiencias se buscan por nombre en
+ * src/data/experiencia.ts. Los tamaños usan `cqw` del cuadro (.zona).
+ */
+import { Image } from 'astro:assets';
+import Inclinar from './Inclinar.astro';
+import TarjetaTecno from './TarjetaTecno.astro';
+import { PROYECTOS_INFO, type Habilidad } from '../data/habilidades';
+import { UI, type Lang } from '../i18n/ui';
+import { getExperiencia, nombreLargo } from '../i18n/datos';
+
+interface Props {
+	habilidad: Habilidad;
+	etiqueta: string; // tag de la carta (el del carril)
+	lang?: Lang;
+}
+
+const { habilidad: h, etiqueta, lang = 'es' } = Astro.props;
+const t = UI[lang].hab;
+const EXPERIENCIA = getExperiencia(lang);
+const Icono = h.icono;
+const n = h.anios.length;
+
+// Si un nombre no existe en los datos, el build falla con un mensaje claro (mejor que un hueco silencioso)
+const proyectos = h.proyectos.map((p) => {
+	const info = PROYECTOS_INFO[p.proyecto];
+	if (!info) throw new Error(`[${h.titulo}] proyecto "${p.proyecto}" no está en PROYECTOS_INFO`);
+	return { ...p, logo: info.logo };
+});
+const experiencias = h.experiencias.map((nombre) => {
+	const e = EXPERIENCIA.find((x) => x.nombre === nombre);
+	if (!e) throw new Error(`[${h.titulo}] experiencia "${nombre}" no está en src/data/experiencia.ts`);
+	return e;
+});
+const resumenGrafico = h.anios
+	.map((a) => `${a.anio}: ${t.de5(a.rango)}${a.enProgreso ? ` (${t.enProgresoAria})` : ''}`)
+	.join(', ');
+---
+
+<article class="ph" style={`--acento:${h.color}`}>
+	<button type="button" class="cerrar" data-cerrar aria-label={t.cerrarPanel}>
+		<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+	</button>
+
+	<div class="cabeza">
+		<div class="carta-fija">
+			<Inclinar radio="calc(var(--ancho-carta) * 0.045)" luz={false}>
+				<TarjetaTecno titulo={`{ ${h.titulo} }`} etiqueta={etiqueta}><Icono /></TarjetaTecno>
+			</Inclinar>
+		</div>
+
+		<div class="info">
+			<h3 class="nombre-hab" tabindex="-1">{h.nombre}</h3>
+			<p class="desc">{h.descripcion}</p>
+
+			<figure class="grafico">
+				<figcaption>{t.experiencia} <strong>{n} {n === 1 ? t.anio : t.anios}</strong></figcaption>
+				<div class="plot" role="img" aria-label={t.graficoAria(resumenGrafico)}>
+					<span class="eje-y" aria-hidden="true">{t.ejeY}</span>
+					<div class="barras" style={`--n:${n}`} aria-hidden="true">
+						{
+							h.anios.map((a, i) => (
+								<div class="col">
+									<div
+										class:list={['barra', { prog: a.enProgreso }]}
+										style={`--r:${a.rango};--k:${i}`}
+									>
+										{a.enProgreso && <span>{t.enProgreso}</span>}
+									</div>
+								</div>
+							))
+						}
+					</div>
+					<div class="anios" style={`--n:${n}`} aria-hidden="true">
+						{h.anios.map((a) => <span>{a.anio}</span>)}
+					</div>
+				</div>
+			</figure>
+		</div>
+	</div>
+
+	{
+		h.areas.length > 0 && (
+			<section class="bloque">
+				<h4 class="titulo-linea">{t.areas}</h4>
+				<ul class="tags">
+					{h.areas.map((a) => (
+						<li class="tag">{a}</li>
+					))}
+				</ul>
+			</section>
+		)
+	}
+
+	<div class:list={['medio', { solo: proyectos.length === 0 }]}>
+		<section class="conocimiento">
+			<div>
+				<h4 class="subtitulo">{t.conocimiento}</h4>
+				<ul class="checks">
+					{
+						h.conocimientos.map((c) => (
+							<li>
+								<svg viewBox="0 0 20 20" aria-hidden="true">
+									<rect width="20" height="20" rx="4" />
+									<path d="M5 10.5l3.2 3.2L15 6.8" />
+								</svg>
+								{c}
+							</li>
+						))
+					}
+				</ul>
+			</div>
+			<div class="dominio">
+				<div class="dona" style={`--d:${h.dominio}`}>
+					<span>{t.nivel}<strong>{t.niveles[h.nivel]}</strong></span>
+				</div>
+				<p>{t.dominio(h.dominio)}</p>
+			</div>
+		</section>
+
+		{
+			proyectos.length > 0 && (
+				<section class="proyectos">
+					<h4 class="subtitulo">{t.proyectos}</h4>
+					<ul class="p-lista">
+						{proyectos.map((p) => (
+							<li>
+								<Image class="p-logo" src={p.logo} alt="" widths={[96, 192]} sizes="6rem" />
+								<div>
+									<p class="p-nombre">{p.proyecto}</p>
+									<p class="p-detalle">{p.detalle}</p>
+								</div>
+							</li>
+						))}
+					</ul>
+				</section>
+			)
+		}
+	</div>
+
+	{
+		experiencias.length > 0 && (
+			<section class="bloque">
+				<h4 class="titulo-linea">{t.experiencias}</h4>
+				<div class="ph-carrusel">
+					<ul class="ph-pista">
+						{experiencias.map((e) => (
+							<li class="mini">
+								<span class="m-fecha">{e.fecha}</span>
+								<span class:list={['m-nombre', { larga: nombreLargo(e.nombre) }]}>{e.nombre}</span>
+								<span class="m-sub">{e.subtitulo}</span>
+								{e.logo && (
+									<Image class="m-logo" src={e.logo} alt="" widths={[160, 320]} sizes="8rem" draggable="false" />
+								)}
+							</li>
+						))}
+					</ul>
+				</div>
+			</section>
+		)
+	}
+</article>
+
+<style>
+	@property --dd {
+		syntax: '<number>';
+		inherits: false;
+		initial-value: 0;
+	}
+
+	.ph {
+		--ancho-carta: 38.6cqw;
+		--fs-cuerpo: max(0.9rem, 2.2cqw);
+		--fs-sub: max(1.05rem, 2.05cqw);
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 3.2cqw;
+		padding: 4.2cqw 4cqw 4.4cqw;
+		text-align: left;
+		color: #fff;
+	}
+
+	/* Entrada escalonada del contenido */
+	.ph > * {
+		animation: entra 0.55s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+	}
+	.ph > :nth-child(3) {
+		animation-delay: 60ms;
+	}
+	.ph > :nth-child(4) {
+		animation-delay: 120ms;
+	}
+	.ph > :nth-child(5) {
+		animation-delay: 180ms;
+	}
+	@keyframes entra {
+		from {
+			opacity: 0;
+			filter: blur(6px);
+			translate: 0 12px;
+		}
+	}
+
+	/* ---------- Botón cerrar: vidrio con brillo superior ---------- */
+	.cerrar {
+		position: absolute;
+		z-index: 5;
+		top: 1.3cqw;
+		right: 1.6cqw;
+		display: grid;
+		place-items: center;
+		width: max(2.9rem, 8.4cqw);
+		height: max(2rem, 4.2cqw);
+		border-radius: max(0.55rem, 1.1cqw);
+		border: 1px solid rgb(255 255 255 / 0.4);
+		background:
+			linear-gradient(180deg, rgb(255 255 255 / 0.32), rgb(255 255 255 / 0.1) 48%, rgb(255 255 255 / 0.03) 52%, rgb(255 255 255 / 0.12));
+		-webkit-backdrop-filter: blur(10px);
+		backdrop-filter: blur(10px);
+		box-shadow:
+			inset 0 1px 0 rgb(255 255 255 / 0.65),
+			inset 0 -0.5cqw 0.9cqw rgb(255 255 255 / 0.1),
+			0 0.5cqw 1.4cqw rgb(0 0 0 / 0.45);
+		cursor: pointer;
+		transition:
+			background 0.2s,
+			border-color 0.2s,
+			transform 0.15s;
+	}
+	.cerrar svg {
+		width: 52%;
+		height: 72%;
+		fill: none;
+		stroke: #fff;
+		stroke-width: 3;
+		stroke-linecap: round;
+		filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.6));
+		transition: rotate 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+	.cerrar:hover {
+		border-color: rgb(255 255 255 / 0.7);
+		background:
+			linear-gradient(180deg, rgb(255 255 255 / 0.45), rgb(255 255 255 / 0.16) 48%, rgb(255 255 255 / 0.08) 52%, rgb(255 255 255 / 0.2));
+	}
+	.cerrar:hover svg {
+		rotate: 90deg;
+	}
+	.cerrar:active {
+		transform: translateY(1px) scale(0.97);
+	}
+	.cerrar:focus-visible {
+		outline: 2px solid #fff;
+		outline-offset: 3px;
+	}
+
+	/* ---------- Cabecera: carta fija + nombre, descripción y gráfico ---------- */
+	.cabeza {
+		display: grid;
+		grid-template-columns: var(--ancho-carta) minmax(0, 1fr);
+		gap: 2.5cqw;
+		align-items: start;
+	}
+	.carta-fija {
+		width: var(--ancho-carta);
+	}
+	/* sombra suave detrás de la carta grande */
+	.carta-fija :global(.inclinar) {
+		box-shadow: var(--sx, 0px) calc(1.2cqw + var(--sy, 0px)) 3cqw rgb(0 0 0 / 0.35);
+	}
+	.info {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+		padding-top: 2cqw;
+	}
+	.nombre-hab {
+		padding-right: max(3.2rem, 9cqw); /* deja sitio al botón cerrar */
+		font-size: max(1.15rem, 2.25cqw);
+		font-weight: 700;
+		line-height: 1.2;
+		outline: none;
+	}
+	.desc {
+		margin-top: 1.3cqw;
+		font-size: var(--fs-cuerpo);
+		line-height: 1.7;
+		text-align: justify;
+		hyphens: none;
+		overflow-wrap: normal;
+		color: rgb(255 255 255 / 0.92);
+	}
+
+	/* Gráfico de barras */
+	.grafico {
+		margin-top: auto;
+		padding-top: 3.5cqw;
+	}
+	.grafico figcaption {
+		margin-bottom: 1.2cqw;
+		text-align: center;
+		font-size: max(1.2rem, 2.85cqw);
+		line-height: 1.1;
+	}
+	.plot {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		grid-template-rows: max(8rem, 20.5cqw) auto;
+		column-gap: 0.8cqw;
+	}
+	.eje-y {
+		grid-row: 1;
+		writing-mode: vertical-rl;
+		rotate: 180deg;
+		text-align: center;
+		font-size: max(0.8rem, 1.75cqw);
+		white-space: nowrap;
+	}
+	.barras {
+		grid-row: 1;
+		grid-column: 2;
+		display: grid;
+		grid-template-columns: repeat(var(--n), 1fr);
+		align-items: end;
+		border-left: 2px solid #fff;
+		border-bottom: 2px solid #fff;
+		/* 5 líneas de referencia, una por cada nivel del rango */
+		background-image: linear-gradient(to bottom, rgb(255 255 255 / 0.28) 1px, transparent 1px);
+		background-size: 100% 20%;
+	}
+	.col {
+		height: 100%;
+		display: flex;
+		justify-content: center;
+		align-items: flex-end;
+	}
+	.barra {
+		display: grid;
+		place-items: center;
+		width: min(32%, 5cqw);
+		min-width: 1.4rem;
+		height: calc(var(--r) * 20%);
+		background: #fff;
+		transform-origin: bottom;
+		animation: crece 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+		animation-delay: calc(250ms + var(--k) * 90ms);
+	}
+	.barra.prog {
+		background: var(--acento);
+	}
+	.barra span {
+		writing-mode: vertical-rl;
+		rotate: 180deg;
+		font-size: max(0.75rem, 1.55cqw);
+		white-space: nowrap;
+		color: #fff;
+		text-shadow: 0 1px 3px rgb(0 0 0 / 0.55);
+	}
+	@keyframes crece {
+		from {
+			transform: scaleY(0);
+		}
+	}
+	.anios {
+		grid-row: 2;
+		grid-column: 2;
+		display: grid;
+		grid-template-columns: repeat(var(--n), 1fr);
+		padding-top: 0.6cqw;
+		text-align: center;
+		font-size: max(0.9rem, 1.95cqw);
+	}
+
+	/* ---------- Títulos con línea ---------- */
+	.titulo-linea {
+		display: flex;
+		align-items: center;
+		gap: 1.6cqw;
+		margin-bottom: 1.4cqw;
+		font-size: var(--fs-sub);
+		font-weight: 700;
+	}
+	.titulo-linea::after {
+		content: '';
+		flex: 1;
+		height: 1px;
+		background: rgb(255 255 255 / 0.3);
+	}
+	.subtitulo {
+		font-size: var(--fs-sub);
+		font-weight: 400;
+		line-height: 1.2;
+	}
+	.proyectos .subtitulo {
+		font-weight: 700;
+	}
+
+	/* Tags de áreas: vidrio oscuro */
+	.tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1.1cqw 1.2cqw;
+	}
+	.tag {
+		padding: 0.35cqw 1.1cqw;
+		border-radius: 999px;
+		border: 1px solid rgb(255 255 255 / 0.35);
+		background: linear-gradient(180deg, rgb(255 255 255 / 0.2), rgb(255 255 255 / 0.06));
+		box-shadow:
+			inset 0 1px 0 rgb(255 255 255 / 0.35),
+			0 0.3cqw 0.8cqw rgb(0 0 0 / 0.35);
+		font-size: max(0.9rem, 1.8cqw);
+		line-height: 1.35;
+		white-space: nowrap;
+	}
+
+	/* ---------- Conocimiento técnico + proyectos ---------- */
+	.medio {
+		display: grid;
+		grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+		gap: 2.8cqw;
+		align-items: start;
+	}
+	.medio.solo {
+		grid-template-columns: 1fr;
+	}
+	.conocimiento {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 2cqw;
+		padding: 3.4cqw 2cqw 2.6cqw;
+		border: 1px solid rgb(255 255 255 / 0.3);
+		border-radius: 1cqw;
+	}
+	.checks {
+		display: flex;
+		flex-direction: column;
+		gap: 0.9cqw;
+		margin-top: 2cqw;
+		font-size: max(0.88rem, 1.7cqw);
+	}
+	.checks li {
+		display: flex;
+		align-items: center;
+		gap: 0.6cqw;
+	}
+	.checks svg {
+		flex: none;
+		width: 1.1em;
+		height: 1.1em;
+	}
+	.checks rect {
+		fill: #3ba55d;
+	}
+	.checks path {
+		fill: none;
+		stroke: #fff;
+		stroke-width: 2.4;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
+	/* Dona de dominio: el aro se llena hasta --d % con el color de la habilidad */
+	.dominio {
+		flex: none;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1.2cqw;
+	}
+	.dona {
+		position: relative;
+		display: grid;
+		place-items: center;
+		width: max(7rem, 18cqw);
+		aspect-ratio: 1;
+		text-align: center;
+	}
+	.dona::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: 50%;
+		--dd: var(--d);
+		background: conic-gradient(var(--acento) calc(var(--dd) * 1%), #fff 0);
+		-webkit-mask: radial-gradient(farthest-side, transparent 64%, #000 65%);
+		mask: radial-gradient(farthest-side, transparent 64%, #000 65%);
+		animation: llena 1.3s cubic-bezier(0.22, 1, 0.36, 1) 0.3s backwards;
+	}
+	@keyframes llena {
+		from {
+			--dd: 0;
+		}
+	}
+	.dona span {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6cqw;
+		font-size: max(0.9rem, 1.9cqw);
+		line-height: 1.1;
+	}
+	.dona strong {
+		font-weight: 700;
+	}
+	.dominio p {
+		font-size: max(0.8rem, 1.6cqw);
+		white-space: nowrap;
+	}
+
+	/* Lista vertical arrastrable: se ven 3 proyectos (5 en móvil) y, si hay más, el siguiente asoma
+	   difuminado hacia el fondo para indicar que se puede seguir bajando. El script (Habilidades.astro)
+	   pone las clases .mas-abajo / .mas-arriba y el atributo data-lenis-prevent solo cuando hay desbordamiento. */
+	.proyectos ul {
+		--item: max(2.75rem, 6cqw);
+		--sep: 1.5cqw;
+		--visibles: 3;
+		display: flex;
+		flex-direction: column;
+		gap: var(--sep);
+		margin-top: 1.4cqw;
+		user-select: none;
+	}
+	/* Solo se acota (y se vuelve desplazable) si hay más proyectos que --visibles: el script pone .acotada.
+	   Con menos, la lista no es un contenedor de scroll y el dedo sigue desplazando la página. */
+	.proyectos ul.acotada {
+		max-height: calc(var(--visibles) * var(--item) + (var(--visibles) - 1) * var(--sep) + 0.55 * var(--item));
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		scrollbar-width: none;
+	}
+	.proyectos ul.acotada::-webkit-scrollbar {
+		display: none;
+	}
+	.proyectos ul.desplazable {
+		cursor: grab;
+	}
+	.proyectos ul.arrastrando {
+		cursor: grabbing;
+	}
+	.proyectos ul.mas-abajo {
+		-webkit-mask-image: linear-gradient(180deg, #000 0, #000 70%, transparent 100%);
+		mask-image: linear-gradient(180deg, #000 0, #000 70%, transparent 100%);
+	}
+	.proyectos ul.mas-arriba {
+		-webkit-mask-image: linear-gradient(180deg, transparent 0, #000 22%, #000 100%);
+		mask-image: linear-gradient(180deg, transparent 0, #000 22%, #000 100%);
+	}
+	.proyectos ul.mas-arriba.mas-abajo {
+		-webkit-mask-image: linear-gradient(180deg, transparent 0, #000 22%, #000 70%, transparent 100%);
+		mask-image: linear-gradient(180deg, transparent 0, #000 22%, #000 70%, transparent 100%);
+	}
+	.proyectos li {
+		display: flex;
+		align-items: center;
+		gap: 1.2cqw;
+		/* rebote en los extremos: el script fija --rebote al arrastrar de más; al soltar vuelve con un resorte */
+		translate: 0 var(--rebote, 0px);
+		transition: translate 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	.proyectos ul.arrastrando li {
+		transition: none;
+	}
+	.proyectos :global(.p-logo) {
+		flex: none;
+		width: max(2.75rem, 6cqw);
+		height: max(2.75rem, 6cqw);
+		object-fit: cover;
+		border-radius: 0.8cqw;
+	}
+	.p-nombre {
+		font-size: max(1.15rem, 2.9cqw);
+		line-height: 1.1;
+	}
+	.p-detalle {
+		font-size: max(0.85rem, 1.85cqw);
+		color: rgb(255 255 255 / 0.45);
+	}
+
+	/* ---------- Experiencias: carrusel arrastrable con difuminado a los lados ---------- */
+	.ph-carrusel {
+		overflow-x: auto;
+		scrollbar-width: none;
+		cursor: grab;
+		user-select: none;
+		-webkit-mask-image: linear-gradient(90deg, #000 0, #000 88%, transparent 100%);
+		mask-image: linear-gradient(90deg, #000 0, #000 88%, transparent 100%);
+	}
+	.ph-carrusel::-webkit-scrollbar {
+		display: none;
+	}
+	/* difuminado también a la izquierda en cuanto se ha desplazado */
+	.ph-carrusel.movido {
+		-webkit-mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 88%, transparent 100%);
+		mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 88%, transparent 100%);
+	}
+	.ph-carrusel.arrastrando {
+		cursor: grabbing;
+	}
+	.ph-pista {
+		display: flex;
+		gap: 2.6cqw;
+		width: max-content;
+		padding-right: 8cqw;
+		/* rebote en los extremos: el script fija --rebote al arrastrar de más; al soltar vuelve con un resorte */
+		translate: var(--rebote, 0px) 0;
+		transition: translate 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	.ph-carrusel.arrastrando .ph-pista {
+		transition: none;
+	}
+	.mini {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-end;
+		width: max(13rem, 26.3cqw);
+		min-height: max(5.75rem, 10.6cqw);
+		padding: 1.6cqw 1.4cqw;
+		border: max(2px, 0.2cqw) solid #fff;
+		background: linear-gradient(180deg, #000, #262626);
+		user-select: none;
+	}
+	.m-fecha {
+		padding-right: 34%; /* deja sitio al logo de la esquina */
+		font-size: max(0.7rem, 1.15cqw);
+		color: rgb(255 255 255 / 0.65);
+	}
+	.m-nombre {
+		font-size: max(1.35rem, 3cqw);
+		font-weight: 700;
+		line-height: 1.05;
+	}
+	.m-nombre.larga {
+		font-size: max(1rem, 2cqw);
+	}
+	.m-sub {
+		font-size: max(0.75rem, 1.45cqw);
+		line-height: 1.2;
+	}
+	.mini :global(.m-logo) {
+		position: absolute;
+		top: 1.2cqw;
+		right: 1.4cqw;
+		width: auto;
+		max-width: 30%;
+		height: max(1.3rem, 2.6cqw);
+		object-fit: contain;
+		pointer-events: none;
+	}
+
+	/* ---------- Cuadro angosto (móvil) ---------- */
+	@container (max-width: 34rem) {
+		.ph {
+			--ancho-carta: min(58cqw, 14rem);
+			gap: 1.75rem;
+			padding: 3.75rem 1.1rem 1.5rem;
+		}
+		.cerrar {
+			top: 0.75rem;
+			right: 0.75rem;
+		}
+		.cabeza {
+			grid-template-columns: 1fr;
+			justify-items: center;
+			gap: 1.25rem;
+		}
+		.info {
+			padding-top: 0;
+		}
+		.nombre-hab {
+			padding-right: 0;
+			text-align: center;
+		}
+		.desc {
+			margin-top: 0.6rem;
+			line-height: 1.6;
+			text-align: justify;
+		}
+		.grafico {
+			padding-top: 1.5rem;
+		}
+		.titulo-linea {
+			gap: 0.75rem;
+			margin-bottom: 0.75rem;
+		}
+		.tags {
+			gap: 0.5rem;
+		}
+		.tag {
+			padding: 0.15rem 0.7rem;
+		}
+		.medio {
+			grid-template-columns: 1fr;
+			gap: 1.75rem;
+		}
+		.conocimiento {
+			flex-wrap: wrap;
+			gap: 1.25rem;
+			padding: 1.25rem 1rem;
+			border-radius: 0.75rem;
+		}
+		.checks {
+			gap: 0.4rem;
+			margin-top: 0.75rem;
+		}
+		.proyectos ul {
+			--sep: 0.75rem;
+			--item: 2.75rem;
+			--visibles: 5; /* en móvil caben 5 proyectos antes de necesitar desplazar */
+			margin-top: 0.75rem;
+		}
+		.proyectos li {
+			gap: 0.75rem;
+		}
+		.ph-pista {
+			gap: 0.9rem;
+		}
+		.mini {
+			padding: 0.75rem 0.85rem;
+		}
+		.mini :global(.m-logo) {
+			top: 0.6rem;
+			right: 0.7rem;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.ph > *,
+		.barra,
+		.dona::before {
+			animation: none;
+		}
+		.proyectos li,
+		.ph-pista,
+		.cerrar,
+		.cerrar svg {
+			transition: none;
+		}
+	}
+</style>

@@ -1,0 +1,17 @@
+---
+// Cuerpo del portafolio, compartido por las dos rutas (/ en español y /en/ en inglés).
+// Cada componente detecta el idioma por la URL (src/i18n/ui.ts).
+import Presentacion from '@components/Presentacion.astro';
+import Experiencia from '@components/Experiencia.astro';
+import Proyectos from '@components/Proyectos.astro';
+import Habilidades from '@components/Habilidades.astro';
+import Footer from '@components/Footer.astro';
+---
+
+<main>
+	<Presentacion />
+	<Experiencia />
+	<Proyectos />
+	<Habilidades />
+</main>
+<Footer />

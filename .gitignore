@@ -22,3 +22,19 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# herramientas de IA (configuración local, skills, hooks y contexto para asistentes)
+.claude/
+.agents/
+.codex/
+.impeccable/
+.cursor/
+.windsurf/
+.mcp.json
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+skills-lock.json
+
+# documentación de trabajo (enlace a la bóveda de Obsidian, solo existe en este equipo)
+docs_obsidian

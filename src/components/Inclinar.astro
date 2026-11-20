@@ -1,0 +1,176 @@
+---
+/**
+ * Efecto de inclinación 3D reutilizable. Envuelve cualquier contenido:
+ *
+ *   <Inclinar radio="4.5cqw"><MiTarjeta /></Inclinar>
+ *
+ * Al pasar el cursor, el lado cercano se hunde y el opuesto sobresale; además
+ * hay un brillo blanco tenue que sigue al cursor, un reflejo en los bordes y
+ * una sombra interior/exterior que cambia con la inclinación (da profundidad).
+ *
+ * Props (todas opcionales):
+ *  - radio:       border-radius del contenido, para que brillo/bordes lo sigan (cualquier unidad CSS;
+ *                 `cqw` se mide contra el ancho del propio envoltorio). Por defecto "0".
+ *  - max:         grados máximos de rotación. Por defecto 12.
+ *  - escala:      zoom al estar activo. Por defecto 1.03.
+ *  - perspectiva: px de la perspectiva. Por defecto 900.
+ *  - brillo:      intensidad del brillo blanco (0-1). Por defecto 0.12.
+ *  - luz:         false = no dibuja la capa de luz propia (círculo/aro sobre todo el envoltorio). Útil cuando
+ *                 el contenido aplica la luz a su propia forma usando las variables CSS heredadas:
+ *                 --mx/--my (posición del cursor en %), --on (0 o 1 si está activo), --brillo, --ix/--iy (sombra interior en px).
+ *  - class:       clases extra para el envoltorio.
+ *
+ * Si el contenido se inserta con JS después de cargar la página, dispara
+ * `document.dispatchEvent(new Event('inclinar:escanear'))` para activarlo.
+ *
+ * Solo reacciona a ratón/lápiz (en táctil no hay "hover") y se desactiva con
+ * prefers-reduced-motion.
+ */
+interface Props {
+	radio?: string;
+	max?: number;
+	escala?: number;
+	perspectiva?: number;
+	brillo?: number;
+	luz?: boolean;
+	class?: string;
+}
+
+const { radio = '0', max = 16, escala = 1.03, perspectiva = 900, brillo = 0.12, luz = true, class: clase } = Astro.props;
+---
+
+<div
+	class:list={['inclinar', clase]}
+	data-inclinar
+	data-max={max}
+	data-escala={escala}
+	data-perspectiva={perspectiva}
+	style={`--radio:${radio};--brillo:${brillo}`}
+>
+	<slot />
+	{luz && <span class="luz" aria-hidden="true" />}
+</div>
+
+<style>
+	.inclinar {
+		position: relative;
+		container-type: inline-size;
+		width: 100%;
+		--on: 0;
+		border-radius: var(--radio);
+		transform-style: preserve-3d;
+		will-change: transform;
+		transform: perspective(900px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1);
+		transition:
+			transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+			box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+		/* sombra exterior: se desplaza al lado contrario de la inclinación (--sx/--sy) */
+		box-shadow: var(--sx, 0px) calc(0.8cqw + var(--sy, 0px)) 2.4cqw rgb(0 0 0 / 0.65);
+	}
+	/* mientras el cursor se mueve, sigue rápido; al salir vuelve suave (transición larga de arriba) */
+	.inclinar.activo {
+		--on: 1;
+		transition:
+			transform 0.12s ease-out,
+			box-shadow 0.12s ease-out;
+		box-shadow: var(--sx, 0px) calc(2cqw + var(--sy, 0px)) 5cqw rgb(0 0 0 / 0.55);
+	}
+
+	/* Capa de luz por encima del contenido; no intercepta clics */
+	.luz {
+		position: absolute;
+		inset: 0;
+		z-index: 10;
+		border-radius: inherit;
+		pointer-events: none;
+		opacity: 0;
+		transition: opacity 0.3s ease-out;
+		/* brillo blanco tenue que sigue al cursor + sombra interior hacia el lado hundido */
+		background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgb(255 255 255 / var(--brillo)) 0%, transparent 65%);
+		box-shadow:
+			inset 0 0 0 1px rgb(255 255 255 / 0.1),
+			inset var(--ix, 0px) var(--iy, 0px) 4cqw rgb(0 0 0 / 0.45);
+	}
+	/* Reflejo en los bordes: un aro fino que se ilumina cerca del cursor */
+	.luz::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		padding: 0.5cqw;
+		background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgb(255 255 255 / 0.75) 0%, rgb(255 255 255 / 0.12) 45%, transparent 75%);
+		-webkit-mask:
+			linear-gradient(#000 0 0) content-box,
+			linear-gradient(#000 0 0);
+		-webkit-mask-composite: xor;
+		mask:
+			linear-gradient(#000 0 0) content-box exclude,
+			linear-gradient(#000 0 0);
+	}
+	.inclinar.activo > .luz {
+		opacity: 1;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.inclinar,
+		.inclinar.activo {
+			transition: none;
+		}
+	}
+</style>
+
+<script>
+	// Un solo script para todas las instancias (Astro lo incluye una vez)
+	const reducido = matchMedia('(prefers-reduced-motion: reduce)');
+
+	function iniciar(el: HTMLElement) {
+		if (el.dataset.listo) return;
+		el.dataset.listo = '1';
+		const max = Number(el.dataset.max) || 12;
+		const escala = Number(el.dataset.escala) || 1.03;
+		const persp = Number(el.dataset.perspectiva) || 900;
+		let cuadro = 0;
+		let ultimo: PointerEvent | null = null;
+
+		const pintar = () => {
+			cuadro = 0;
+			if (!ultimo) return;
+			const r = el.getBoundingClientRect();
+			const x = ultimo.clientX - r.left;
+			const y = ultimo.clientY - r.top;
+			const nx = (x - r.width / 2) / (r.width / 2); // -1 … 1
+			const ny = (y - r.height / 2) / (r.height / 2);
+			const rx = -ny * max; // cursor arriba → el lado superior se hunde
+			const ry = nx * max;
+			el.style.transform = `perspective(${persp}px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) scale3d(${escala}, ${escala}, ${escala})`;
+			el.style.setProperty('--mx', `${((x / r.width) * 100).toFixed(1)}%`);
+			el.style.setProperty('--my', `${((y / r.height) * 100).toFixed(1)}%`);
+			// sombra exterior hacia el lado opuesto al cursor; sombra interior hacia el lado hundido
+			el.style.setProperty('--sx', `${(-nx * 0.05 * r.width).toFixed(1)}px`);
+			el.style.setProperty('--sy', `${(-ny * 0.05 * r.height).toFixed(1)}px`);
+			el.style.setProperty('--ix', `${(nx * 0.03 * r.width).toFixed(1)}px`);
+			el.style.setProperty('--iy', `${(ny * 0.03 * r.height).toFixed(1)}px`);
+		};
+
+		el.addEventListener('pointermove', (e) => {
+			if (reducido.matches || e.pointerType === 'touch') return;
+			ultimo = e;
+			el.classList.add('activo');
+			if (!cuadro) cuadro = requestAnimationFrame(pintar);
+		});
+		el.addEventListener('pointerleave', () => {
+			ultimo = null;
+			cancelAnimationFrame(cuadro);
+			cuadro = 0;
+			el.classList.remove('activo');
+			el.style.transform = `perspective(${persp}px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+			for (const v of ['--sx', '--sy', '--ix', '--iy']) el.style.removeProperty(v);
+		});
+	}
+
+	const escanear = () => document.querySelectorAll<HTMLElement>('[data-inclinar]').forEach(iniciar);
+	escanear();
+	// Para contenido que se inserta después de cargar (p. ej. desde un <template>):
+	// document.dispatchEvent(new Event('inclinar:escanear'))
+	document.addEventListener('inclinar:escanear', escanear);
+</script>

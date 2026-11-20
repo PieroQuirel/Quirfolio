@@ -1,0 +1,5 @@
+[[redirects]]
+  from = "https://quirfolio.netlify.app/*"
+  to = "https://pieroquiroz.dev/:splat"
+  status = 301
+  force = true

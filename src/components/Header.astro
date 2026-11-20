@@ -1,9 +1,214 @@
-<header class="flex justify-center items-center py-3 w-[1120px] mx-auto">
-    <nav>
-        <ul class="flex flex-row gap-x-10">
-        <li><a href="#experiencia">Experiencia</a></li>
-        <li><a href="#proyectos">Proyectos</a></li>
-        <li><a href="#habilidades">Habilidades</a></li>
+---
+import SelectorIdioma from './SelectorIdioma.astro';
+import { UI, getLang } from '../i18n/ui';
+
+// base: ruta de la portada para páginas sin secciones (p. ej. la 404 enlaza a "/#proyectos")
+const { base = '' } = Astro.props;
+const t = UI[getLang(Astro.url)].nav;
+// Enlaces de navegación (los usan la barra de escritorio y el menú móvil)
+const ENLACES = [
+    { texto: t.inicio, href: base + '#inicio' },
+    { texto: t.experiencia, href: base + '#experiencia' },
+    { texto: t.proyectos, href: base + '#proyectos' },
+    { texto: t.habilidades, href: base + '#habilidades' },
+];
+---
+
+<header class="fixed top-3 inset-x-0 z-50 px-3">
+    <!-- Escritorio / tablet: barra flotante -->
+    <nav class="barra vidrio rounded-full mx-auto max-w-3xl py-3 px-5 md:px-8" aria-label={t.principal}>
+        <ul class="flex flex-row flex-wrap items-center justify-center gap-x-4 md:gap-x-8 lg:gap-x-10 gap-y-1 text-base md:text-lg uppercase tracking-wider">
+            {ENLACES.map((e) => <li><a class="nav-link" href={e.href}>{e.texto}</a></li>)}
+            <li class="selector"><SelectorIdioma /></li>
         </ul>
     </nav>
+
+    <!-- Móvil: un botón y el menú solo se despliega al presionarlo -->
+    <div class="movil" data-menu data-t-abrir={t.abrirMenu} data-t-cerrar={t.cerrarMenu}>
+        <button
+            type="button"
+            class="boton vidrio"
+            aria-expanded="false"
+            aria-controls="menu-movil"
+            aria-label={t.abrirMenu}
+        >
+            <span class="icono" aria-hidden="true"></span>
+            <span class="boton-texto">{t.menu}</span>
+        </button>
+        <div class="idioma-movil vidrio"><SelectorIdioma /></div>
+        <nav id="menu-movil" class="panel vidrio" aria-label={t.principalMenu}>
+            <ul>
+                {ENLACES.map((e) => <li><a class="nav-link item" href={e.href}>{e.texto}</a></li>)}
+            </ul>
+        </nav>
+    </div>
 </header>
+
+<script>
+    const menu = document.querySelector<HTMLElement>('[data-menu]');
+    const boton = menu?.querySelector<HTMLButtonElement>('.boton');
+    if (menu && boton) {
+        const abrir = (si: boolean) => {
+            menu.classList.toggle('abierto', si);
+            boton.setAttribute('aria-expanded', String(si));
+            boton.setAttribute('aria-label', (si ? menu.dataset.tCerrar : menu.dataset.tAbrir) ?? '');
+        };
+        boton.addEventListener('click', () => abrir(!menu.classList.contains('abierto')));
+        // Al elegir una sección se cierra (el scroll suave lo gestiona el Layout)
+        menu.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => abrir(false)));
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && menu.classList.contains('abierto')) {
+                abrir(false);
+                boton.focus();
+            }
+        });
+        // Clic fuera del menú
+        document.addEventListener('pointerdown', (e) => {
+            if (menu.classList.contains('abierto') && !menu.contains(e.target as Node)) abrir(false);
+        });
+        // Si la pantalla crece y aparece la barra, el menú se cierra
+        matchMedia('(min-width: 640px)').addEventListener('change', (e) => e.matches && abrir(false));
+    }
+</script>
+
+<style>
+    .nav-link {
+        color: rgb(255 255 255 / 0.7);
+        transition: color 0.2s, text-shadow 0.2s;
+    }
+    /* separación respecto a los enlaces: una línea fina */
+    .selector {
+        padding-inline-start: 1rem;
+        border-inline-start: 1px solid rgb(255 255 255 / 0.2);
+    }
+    .nav-link:hover {
+        color: #fff;
+        text-shadow: 0 0 12px rgb(255 255 255 / 0.6);
+    }
+
+    /* ---------- Móvil (< 640px): botón + menú desplegable ---------- */
+    .movil {
+        display: none;
+    }
+    @media (max-width: 639.98px) {
+        .barra {
+            display: none;
+        }
+        .movil {
+            display: block;
+            position: relative;
+        }
+        .idioma-movil {
+            position: absolute;
+            top: 0;
+            right: 0;
+            display: flex;
+            align-items: center;
+            height: 100%;
+            padding-inline: 0.7rem;
+            border-radius: 999px;
+        }
+        .boton {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-inline: auto;
+            padding: 0.6rem 1.4rem 0.6rem 1.1rem;
+            border-radius: 999px;
+            font-size: 1.1rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #fff;
+            cursor: pointer;
+        }
+        .boton:focus-visible,
+        .item:focus-visible {
+            outline: 2px solid #fff;
+            outline-offset: 3px;
+        }
+
+        /* Icono de dos líneas que se convierte en X */
+        .icono {
+            position: relative;
+            width: 1.2rem;
+            height: 0.9rem;
+        }
+        .icono::before,
+        .icono::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            border-radius: 2px;
+            background: currentColor;
+            transition:
+                transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+                top 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .icono::before {
+            top: 0.1rem;
+        }
+        .icono::after {
+            top: 0.65rem;
+        }
+        .abierto .icono::before {
+            top: 0.375rem;
+            transform: rotate(45deg);
+        }
+        .abierto .icono::after {
+            top: 0.375rem;
+            transform: rotate(-45deg);
+        }
+
+        .panel {
+            position: absolute;
+            top: calc(100% + 0.5rem);
+            left: 0;
+            right: 0;
+            padding: 0.5rem;
+            border-radius: 1.75rem;
+            /* más opaco que el vidrio base para que se lea sobre cualquier contenido */
+            background: linear-gradient(180deg, rgb(24 24 24 / 0.85), rgb(0 0 0 / 0.8));
+            /* cerrado: invisible y fuera del orden de tabulación */
+            visibility: hidden;
+            opacity: 0;
+            transform: translateY(-0.5rem) scale(0.98);
+            transform-origin: top center;
+            transition:
+                opacity 0.25s ease,
+                transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+                visibility 0s 0.3s;
+        }
+        .abierto .panel {
+            visibility: visible;
+            opacity: 1;
+            transform: none;
+            transition-delay: 0s;
+        }
+        .panel ul {
+            display: flex;
+            flex-direction: column;
+        }
+        .item {
+            display: block;
+            padding: 0.9rem 1.25rem;
+            border-radius: 1.25rem;
+            font-size: 1.25rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .item:hover,
+        .item:active {
+            background: rgb(255 255 255 / 0.1);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .icono::before,
+        .icono::after,
+        .panel {
+            transition: none;
+        }
+    }
+</style>
