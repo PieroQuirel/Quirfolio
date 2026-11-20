@@ -56,9 +56,13 @@
 			gl.drawArrays(gl.TRIANGLES, 0, 3);
 		};
 
+		// Se mide el propio lienzo (CSS: ancho de la pantalla y 100lvh, la altura con la barra del navegador
+		// recogida) y no window.innerHeight: en el móvil esa altura cambia al hacer scroll (la barra se
+		// esconde y reaparece) y cada cambio reescalaba el patrón de golpe
 		const ajustar = () => {
-			canvas.width = Math.max(2, Math.floor(window.innerWidth * ESCALA));
-			canvas.height = Math.max(2, Math.floor(window.innerHeight * ESCALA));
+			if (!listo) return;
+			canvas.width = Math.max(2, Math.floor(canvas.clientWidth * ESCALA));
+			canvas.height = Math.max(2, Math.floor(canvas.clientHeight * ESCALA));
 			gl.viewport(0, 0, canvas.width, canvas.height);
 			gl.uniform2f(uRes, canvas.width, canvas.height);
 			// Cambiar el tamaño borra el lienzo: con movimiento reducido no hay bucle que lo repinte
@@ -67,9 +71,14 @@
 
 		// El bucle solo corre con la pestaña visible y sin ningún <dialog> abierto:
 		// el desenfoque de su fondo sobre un canvas que cambia en cada fotograma es lo más costoso
+		// En táctil se dibuja a 30 fps: el movimiento es lento y la GPU del móvil descansa la mitad del tiempo
+		const INTERVALO = matchMedia('(pointer: coarse)').matches ? 1000 / 30 - 2 : 0;
+		let ultimo = 0;
 		const bucle = (ms: number) => {
-			dibujar(ms);
 			raf = requestAnimationFrame(bucle);
+			if (ms - ultimo < INTERVALO) return;
+			ultimo = ms;
+			dibujar(ms);
 		};
 		const sincronizar = () => {
 			cancelAnimationFrame(raf);
@@ -86,7 +95,7 @@
 		};
 
 		arrancar();
-		window.addEventListener('resize', ajustar);
+		new ResizeObserver(ajustar).observe(canvas);
 		document.addEventListener('visibilitychange', sincronizar);
 		new MutationObserver(sincronizar).observe(document.body, {
 			subtree: true,

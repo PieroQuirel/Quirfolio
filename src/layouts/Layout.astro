@@ -180,6 +180,20 @@ const datosEstructurados = {
 			}, { threshold: 0.01, rootMargin: '0px 0px -12% 0px' });
 			hosts.forEach((h) => io.observe(h));
 
+			// Maquetar las secciones por adelantado: pasada la animación de entrada de la portada, y una por cada
+			// momento de reposo del navegador, se dejan listas (invisibles) las que aún están plegadas. Así, al llegar
+			// a ellas solo falta animarlas; antes todo su diseño se calculaba de golpe al revelarse y en el móvil la
+			// pantalla se quedaba un instante colgada.
+			const pendientes = [...hosts];
+			const reposo = (fn: () => void) =>
+				'requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 3000 }) : setTimeout(fn, 600);
+			const preparar = () => {
+				const r = pendientes.shift()?.querySelector('.reveal');
+				if (r && !r.hasAttribute('data-visible')) r.setAttribute('data-lista', '');
+				if (pendientes.length) reposo(preparar);
+			};
+			if (!reduce) window.addEventListener('load', () => setTimeout(() => reposo(preparar), 2500));
+
 			// Entrada con #ancla (p. ej. al cambiar de idioma): las secciones aún están plegadas,
 			// así que se viaja con el mismo recálculo por fotograma en vez de confiar en el salto del navegador
 			if (location.hash) {

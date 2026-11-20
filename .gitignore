@@ -38,3 +38,6 @@ skills-lock.json
 
 # documentación de trabajo (enlace a la bóveda de Obsidian, solo existe en este equipo)
 docs_obsidian
+
+# Playwright MCP (instantáneas y capturas locales)
+.playwright-mcp/

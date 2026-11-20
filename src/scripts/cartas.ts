@@ -92,10 +92,11 @@ export function iniciarCartas(raiz: HTMLElement) {
 		m.style.transform = `translate3d(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px, 0) rotate(${rot.toFixed(2)}deg)`;
 	};
 
-	// Coloca cada carta en su hueco (menos la que se está arrastrando)
-	const colocar = (c: Carril, salvo?: HTMLElement) => {
-		if (c.el.clientWidth < 2) return; // sección aún oculta (reveal)
-		const s = medidas(c);
+	// Coloca cada carta en su hueco (menos la que se está arrastrando). Las medidas pueden venir ya tomadas
+	// (null = carril aún oculto: reveal) para medir todos los carriles antes de escribir en ninguno
+	const medir = (c: Carril) => (c.el.clientWidth < 2 ? null : medidas(c));
+	const colocar = (c: Carril, salvo?: HTMLElement, s = medir(c)) => {
+		if (!s) return;
 		c.cartas.forEach((m, i) => {
 			m.style.setProperty('--z', String(i + 1));
 			if (m !== salvo) pintar(m, { x: s.x0 + i * s.paso, y: s.y });
@@ -103,10 +104,12 @@ export function iniciarCartas(raiz: HTMLElement) {
 	};
 
 	const ro = new ResizeObserver((entradas) => {
-		for (const e of entradas) {
+		// primero se mide todo y después se escribe: así no se fuerza un recálculo de estilos por cada carril
+		const medidos = entradas.flatMap((e) => {
 			const c = carriles.find((k) => k.el === e.target);
-			if (c) colocar(c, arr?.m);
-		}
+			return c ? [[c, medir(c)] as const] : [];
+		});
+		for (const [c, s] of medidos) colocar(c, arr?.m, s);
 		// la primera colocación no se anima; después sí
 		requestAnimationFrame(() => raiz.classList.add('listo'));
 	});

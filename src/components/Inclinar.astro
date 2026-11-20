@@ -111,6 +111,15 @@ const { radio = '0', max = 16, escala = 1.03, perspectiva = 900, brillo = 0.12, 
 		opacity: 1;
 	}
 
+	/* Sin cursor (táctil) no hay inclinación: sin transformación 3D ni capa propia por cada carta */
+	@media (hover: none) {
+		.inclinar {
+			transform: none;
+			transform-style: flat;
+			will-change: auto;
+		}
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.inclinar,
 		.inclinar.activo {
@@ -131,6 +140,7 @@ const { radio = '0', max = 16, escala = 1.03, perspectiva = 900, brillo = 0.12, 
 		const persp = Number(el.dataset.perspectiva) || 900;
 		let cuadro = 0;
 		let ultimo: PointerEvent | null = null;
+		let inclinada = false; // solo se devuelve a su sitio lo que de verdad se inclinó (en táctil nunca ocurre)
 
 		const pintar = () => {
 			cuadro = 0;
@@ -142,6 +152,7 @@ const { radio = '0', max = 16, escala = 1.03, perspectiva = 900, brillo = 0.12, 
 			const ny = (y - r.height / 2) / (r.height / 2);
 			const rx = -ny * max; // cursor arriba → el lado superior se hunde
 			const ry = nx * max;
+			inclinada = true;
 			el.style.transform = `perspective(${persp}px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) scale3d(${escala}, ${escala}, ${escala})`;
 			el.style.setProperty('--mx', `${((x / r.width) * 100).toFixed(1)}%`);
 			el.style.setProperty('--my', `${((y / r.height) * 100).toFixed(1)}%`);
@@ -163,6 +174,8 @@ const { radio = '0', max = 16, escala = 1.03, perspectiva = 900, brillo = 0.12, 
 			cancelAnimationFrame(cuadro);
 			cuadro = 0;
 			el.classList.remove('activo');
+			if (!inclinada) return;
+			inclinada = false;
 			el.style.transform = `perspective(${persp}px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
 			for (const v of ['--sx', '--sy', '--ix', '--iy']) el.style.removeProperty(v);
 		});

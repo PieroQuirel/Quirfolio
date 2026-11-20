@@ -74,6 +74,7 @@ body {
 	z-index: -3;
 	width: 100%;
 	height: 100%;
+	height: 100lvh; /* fija: no cambia cuando el móvil esconde o muestra su barra al hacer scroll */
 	opacity: 0;
 	transition: opacity 1.2s ease;
 	image-rendering: auto;
@@ -278,6 +279,17 @@ body {
 	opacity: 0;
 }
 
+/* Preparada (data-lista): el script la maqueta en un momento de reposo, ya con el aspecto de salida pero
+   invisible (visibility: hidden: ni se ve, ni se enfoca, ni se lee). Así el cálculo pesado de la sección
+   no ocurre en el mismo fotograma en que arranca su animación de entrada. */
+.reveal[data-lista]:not([data-visible]) {
+	display: block;
+	visibility: hidden;
+	opacity: 0;
+	filter: blur(8px);
+	transform: translateX(var(--reveal-x, 0)) translateY(var(--reveal-y, 0)) scale(0.95);
+}
+
 .reveal[data-visible] {
 	display: block;
 	opacity: 1;
@@ -294,6 +306,18 @@ body {
 		opacity: 0;
 		filter: blur(8px);
 		transform: translateX(var(--reveal-x, 0)) translateY(var(--reveal-y, 0)) scale(0.95);
+	}
+}
+
+/* En táctil la entrada no desenfoca: animar un filtro sobre una sección tan alta pesa mucho en la GPU del móvil */
+@media (pointer: coarse) {
+	.reveal[data-lista]:not([data-visible]) {
+		filter: none;
+	}
+	.reveal[data-visible] {
+		@starting-style {
+			filter: none;
+		}
 	}
 }
 
