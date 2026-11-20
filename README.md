@@ -4,4 +4,4 @@
 
 Mi portafolio web donde iré actualizandolo con los nuevos proyectos que estaré desarrollando >:) !
 
-![image](https://github.com/user-attachments/assets/16a8c72b-cd3e-4f7b-bec8-dfb2caed6f0a)
+![image](https://github.com/user-attachments/assets/6b1fa5f7-1fa2-4364-b2be-6cc57f0bc44e)
