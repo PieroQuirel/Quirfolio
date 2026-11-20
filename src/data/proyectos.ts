@@ -25,7 +25,7 @@ import romiali2 from '../images/proyectos/romiali2.png';
 import romiali3 from '../images/proyectos/romiali3.png';
 import celleyes from '../images/proyectos/celleyes-app.png';
 import celleyes2 from '../images/proyectos/celleyes2.png';
-import uywalky from '../images/proyectos/Uywalky.png';
+import uywalky from '../images/proyectos/uywalky.png';
 import patitas1 from '../images/proyectos/patitas.png';
 import patitas2 from '../images/proyectos/patitas2.png';
 import patitas3 from '../images/proyectos/patitas3.png';
@@ -87,7 +87,7 @@ export const PROYECTOS: Proyecto[] = [
 		stack: ['React', 'MySQL', 'Figma', 'Trello'],
 		github: 'https://github.com/CarlitosMikhaelTP/PROJECT_2023-II',
 	},
-		{
+	{
 		titulo: 'Refugio de Patitas',
 		fecha: 'Julio 2023',
 		imagenes: [patitas1, patitas2, patitas3, patitas4, patitas5],
