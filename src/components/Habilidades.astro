@@ -159,6 +159,11 @@ const CARRILES = getCarriles(lang);
 		width: var(--carta);
 		cursor: grab;
 		touch-action: pan-y; /* en táctil: deslizar en vertical sigue haciendo scroll; en horizontal arrastra */
+		/* presión larga: sin selección de texto, sin menú de imagen (iOS) ni resaltado del toque */
+		-webkit-user-select: none;
+		user-select: none;
+		-webkit-touch-callout: none;
+		-webkit-tap-highlight-color: transparent;
 		outline: none;
 	}
 	.listo .mov {
@@ -175,6 +180,11 @@ const CARRILES = getCarriles(lang);
 	}
 	.con-arrastre {
 		cursor: grabbing;
+	}
+	/* Con el dedo la carta va pegada a él: sin la transición de rebote mientras se arrastra
+	   (con mouse se conserva, da la sensación de peso). Necesita `.listo` para ganarle a `.listo .mov`. */
+	.listo .mov.arrastrando.al-dedo {
+		transition: none;
 	}
 
 	/* Agrandamiento al pasar el cursor (y al arrastrar): indica que la carta se puede tomar */
@@ -202,6 +212,17 @@ const CARRILES = getCarriles(lang);
 	}
 	.mov :global(.inclinar.activo) {
 		box-shadow: var(--sx, 0px) calc(2cqw + var(--sy, 0px)) 5cqw rgb(0 0 0 / 0.25);
+	}
+	/* Táctil: sin sombras difuminadas en las cartas, ni en reposo ni al arrastrar (el filtro se repintaba
+	   en cada cuadro del arrastre) */
+	@media (pointer: coarse) {
+		.mov :global(.inclinar),
+		.mov :global(.inclinar.activo) {
+			box-shadow: none;
+		}
+		.mov.arrastrando .levanta {
+			filter: none;
+		}
 	}
 	.mov:focus-visible {
 		z-index: 60;

@@ -131,9 +131,24 @@ export function iniciarCartas(raiz: HTMLElement) {
 		rot: number;
 		t: number;
 		activo: boolean;
+		tactil: boolean; // dedo o lápiz: sin retraso al seguir y con toma por presión larga
 		origen: number; // posición en el carril al empezar (se restaura si se suelta en el cuadro)
 	} | null = null;
 	let cuadro = 0;
+	let largo: number | undefined; // temporizador de la presión larga (táctil)
+	const PRESION_LARGA = 380; // ms: un poco antes que la del sistema (≈ 400–500 ms), que abriría su menú
+
+	const activar = (a: NonNullable<typeof arr>) => {
+		clearTimeout(largo);
+		a.activo = true;
+		a.t = performance.now();
+		tAuto = 0;
+		a.m.classList.add('arrastrando');
+		a.m.classList.toggle('al-dedo', a.tactil);
+		raiz.classList.add('con-arrastre');
+		zona.classList.add('esperando'); // el cuadro se ilumina mientras haya una carta en el aire
+		if (!cuadro) cuadro = requestAnimationFrame(bucle);
+	};
 
 	const reordenar = (a: NonNullable<typeof arr>) => {
 		const s = medidas(a.c);
@@ -153,13 +168,42 @@ export function iniciarCartas(raiz: HTMLElement) {
 		cuadro = 0;
 		const a = arr;
 		if (!a || !a.activo) return;
+		const desplazo = autoScroll(a);
+		// en táctil ya se movió en el evento del dedo; aquí cuando el dedo está quieto (relaja la inclinación)
+		// o cuando la página se desplazó por debajo de la carta
+		if (desplazo || !a.tactil || performance.now() - a.t > 12) paso(a);
+		cuadro = requestAnimationFrame(bucle);
+	};
+
+	// Desplazamiento automático: con la carta cerca del borde superior o inferior de la pantalla la página
+	// se mueve sola (más rápido cuanto más cerca del borde), así se llega al cuadro o a otra fila
+	// sin soltar la carta. La carta sigue bajo el dedo porque su posición se mide contra el carril.
+	let tAuto = 0;
+	const autoScroll = (a: NonNullable<typeof arr>) => {
+		const t = performance.now();
+		const dt = tAuto ? Math.min(0.05, (t - tAuto) / 1000) : 0;
+		tAuto = t;
+		const borde = Math.max(70, innerHeight * 0.18);
+		let f = 0; // -1 … 1: hacia arriba / abajo
+		if (a.cy < borde) f = -(1 - Math.max(0, a.cy) / borde);
+		else if (a.cy > innerHeight - borde) f = 1 - Math.max(0, innerHeight - a.cy) / borde;
+		if (!f || !dt) return false;
+		const antes = scrollY;
+		// 'instant': con scroll-behavior:smooth cada paso empezaría una animación que el siguiente cancela
+		window.scrollBy({ top: Math.sign(f) * Math.abs(f) ** 1.6 * 1300 * dt, behavior: 'instant' }); // hasta ~1300 px/s en el borde
+		return scrollY !== antes;
+	};
+
+	const paso = (a: NonNullable<typeof arr>) => {
 		const t = performance.now();
 		const dt = Math.max(0.001, Math.min(0.05, (t - a.t) / 1000));
 		a.t = t;
 		const r = a.c.el.getBoundingClientRect();
 		const tx = a.cx - r.left - a.ox;
 		const ty = a.cy - r.top - a.oy;
-		const k = reducido.matches ? 1 : 1 - Math.exp(-dt / 0.006); // Velocidad de arrastre de carta
+		// Velocidad de arrastre: con mouse un leve retraso (hay mucho espacio para moverlo);
+		// con el dedo la carta va pegada a él, sin resistencia
+		const k = reducido.matches || a.tactil ? 1 : 1 - Math.exp(-dt / 0.006);
 		const px = a.x;
 		a.x += (tx - a.x) * k;
 		a.y += (ty - a.y) * k;
@@ -170,16 +214,16 @@ export function iniciarCartas(raiz: HTMLElement) {
 		pintar(a.m, { x: a.x, y: a.y }, a.rot);
 		reordenar(a);
 		zona.classList.toggle('encima', sobreZona(a.cx, a.cy));
-		cuadro = requestAnimationFrame(bucle);
 	};
 
 	const soltar = (e: PointerEvent) => {
 		const a = arr;
 		if (!a || e.pointerId !== a.id) return;
 		arr = null;
+		clearTimeout(largo);
 		cancelAnimationFrame(cuadro);
 		cuadro = 0;
-		a.m.classList.remove('arrastrando');
+		a.m.classList.remove('arrastrando', 'al-dedo');
 		raiz.classList.remove('con-arrastre');
 		zona.classList.remove('esperando', 'encima');
 		// un toque/clic sin arrastrar también abre su panel
@@ -222,11 +266,21 @@ export function iniciarCartas(raiz: HTMLElement) {
 			rot: 0,
 			t: performance.now(),
 			activo: false,
+			tactil: e.pointerType !== 'mouse',
 			origen: c.cartas.indexOf(m),
 		};
 		try {
 			m.setPointerCapture(e.pointerId); // sigue recibiendo el movimiento aunque salga de la sección
 		} catch {}
+		// Presión larga (dedo quieto): la carta queda tomada del todo, con vibración, y ya se puede
+		// mover en cualquier dirección sin que la página haga scroll ni el navegador abra su menú
+		const a = arr;
+		if (a.tactil)
+			largo = window.setTimeout(() => {
+				if (arr !== a || a.activo) return;
+				activar(a);
+				navigator.vibrate?.(15);
+			}, PRESION_LARGA);
 	});
 
 	raiz.addEventListener('pointermove', (e) => {
@@ -235,18 +289,35 @@ export function iniciarCartas(raiz: HTMLElement) {
 		a.cx = e.clientX;
 		a.cy = e.clientY;
 		if (!a.activo) {
-			if (Math.hypot(a.cx - a.sx, a.cy - a.sy) < 5) return;
-			a.activo = true;
-			a.t = performance.now();
-			a.m.classList.add('arrastrando');
-			raiz.classList.add('con-arrastre');
-			zona.classList.add('esperando'); // el cuadro se ilumina mientras haya una carta en el aire
+			const dx = a.cx - a.sx;
+			const dy = a.cy - a.sy;
+			if (Math.hypot(dx, dy) < 5) return;
+			// Con el dedo, deslizar en vertical antes de la presión larga es scroll: se suelta la carta.
+			// En horizontal se toma al instante (como antes).
+			if (a.tactil && Math.abs(dy) > Math.abs(dx)) {
+				clearTimeout(largo);
+				arr = null;
+				return;
+			}
+			activar(a);
 		}
+		// con el dedo la carta se mueve en el mismo evento (un cuadro menos de retraso); el bucle sigue
+		// relajando la inclinación cuando el dedo se detiene
+		if (a.tactil) paso(a);
 		if (!cuadro) cuadro = requestAnimationFrame(bucle);
 	});
 	raiz.addEventListener('pointerup', soltar);
 	raiz.addEventListener('pointercancel', soltar);
 	raiz.addEventListener('dragstart', (e) => e.preventDefault());
+	// Con una carta tomada, el dedo solo mueve la carta: se bloquea el scroll del navegador
+	const bloquearScroll = (e: TouchEvent) => {
+		if (arr?.activo && e.cancelable) e.preventDefault();
+	};
+	carriles.forEach((c) => c.el.addEventListener('touchmove', bloquearScroll, { passive: false }));
+	// Sin menú contextual (guardar imagen, seleccionar…) al mantener presionada una carta
+	raiz.addEventListener('contextmenu', (e) => {
+		if ((e.target as Element).closest('.mov')) e.preventDefault();
+	});
 
 	// Teclado: flechas izquierda/derecha mueven la carta enfocada dentro de su carril
 	raiz.addEventListener('keydown', (e) => {

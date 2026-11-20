@@ -111,12 +111,15 @@ const { radio = '0', max = 16, escala = 1.03, perspectiva = 900, brillo = 0.12, 
 		opacity: 1;
 	}
 
-	/* Sin cursor (táctil) no hay inclinación: sin transformación 3D ni capa propia por cada carta */
+	/* Sin cursor (táctil) no hay inclinación: sin transformación 3D, sin capa propia por cada carta
+	   y sin la sombra exterior difuminada (es la que se mueve con la inclinación; en móvil solo cuesta pintarla) */
 	@media (hover: none) {
-		.inclinar {
+		.inclinar,
+		.inclinar.activo {
 			transform: none;
 			transform-style: flat;
 			will-change: auto;
+			box-shadow: none;
 		}
 	}
 

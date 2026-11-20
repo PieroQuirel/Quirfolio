@@ -165,6 +165,12 @@ const barras = [91, 100, 96, 11, 17, 66];
 		height: 100%;
 		filter: drop-shadow(0 2.4cqw 3.4cqw rgb(0 0 0 / 0.75));
 	}
+	/* Táctil: sin sombra difuminada en el icono (un filtro por cada una de las ~30 cartas es caro de pintar en móvil) */
+	@media (pointer: coarse) {
+		.icono :global(svg) {
+			filter: none;
+		}
+	}
 
 	/* Pegada a la esquina inferior izquierda del panel; solo redondeada arriba a la derecha */
 	.etiqueta {
