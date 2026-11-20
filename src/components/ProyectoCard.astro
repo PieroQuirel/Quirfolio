@@ -2,6 +2,7 @@
 import { Image } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 import BotonesProyecto from './BotonesProyecto.astro';
+import RuedaCarga from './RuedaCarga.astro';
 import { UI, getLang } from '../i18n/ui';
 
 interface Props {
@@ -35,13 +36,17 @@ const vertical = !!imagen && imagen.height >= imagen.width;
 
 	{
 		imagen && (
-			<div class="zona">
+			<div class="zona" data-carga>
+				<RuedaCarga tamano="max(2.4rem, 11cqw)" grosor="14%" />
 				<Image
 					class="imagen"
 					src={imagen}
 					alt=""
-					widths={[480, 800, 1200]}
-					sizes="(min-width: 60rem) 33vw, 86vw"
+					widths={[400, 640, 900]}
+					sizes="(min-width: 60rem) 25vw, 66vw"
+					quality={62}
+					loading="eager"
+					fetchpriority="low"
 					draggable="false"
 				/>
 			</div>

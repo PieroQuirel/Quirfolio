@@ -1,0 +1,96 @@
+---
+/**
+ * Rueda de carga en degradado (blanco → transparente) para imágenes que aún se están descargando.
+ *
+ *   <div data-carga>               ← contenedor de la imagen (position: relative o absolute)
+ *     <RuedaCarga />
+ *     <Image ... />
+ *   </div>
+ *
+ * Mientras el contenedor no tenga `data-cargada`, se ve la rueda y la imagen está oculta; cuando la
+ * imagen termina de cargar (o falla) el script marca el contenedor, la rueda se desvanece y la imagen
+ * aparece con un fundido. Un solo script vigila todas las imágenes, también las de tarjetas clonadas.
+ *
+ * Props (opcionales):
+ *  - tamano: diámetro de la rueda (cualquier unidad CSS; admite `cqw`). Por defecto "2.5rem".
+ *  - grosor: grosor del aro. Por defecto "12%" del diámetro.
+ */
+interface Props {
+	tamano?: string;
+	grosor?: string;
+}
+const { tamano = '2.5rem', grosor = '12%' } = Astro.props;
+---
+
+<span class="rueda" style={`--d:${tamano};--g:${grosor}`} aria-hidden="true"></span>
+
+<style is:global>
+	/* El contenedor reserva el sitio; la imagen aparece con un fundido cuando está lista */
+	[data-carga] img {
+		transition: opacity 0.45s ease-out;
+	}
+	[data-carga]:not([data-cargada]) img {
+		opacity: 0;
+	}
+	[data-carga][data-cargada] .rueda {
+		opacity: 0;
+		visibility: hidden;
+		transition:
+			opacity 0.3s ease-out,
+			visibility 0s 0.3s;
+	}
+</style>
+
+<style>
+	.rueda {
+		position: absolute;
+		inset: 0;
+		margin: auto;
+		width: var(--d);
+		height: var(--d);
+		border-radius: 50%;
+		pointer-events: none;
+		/* Aro con degradado cónico: la cola transparente y la cabeza blanca */
+		background: conic-gradient(from 0deg, rgb(255 255 255 / 0) 0%, rgb(255 255 255 / 0.95) 100%);
+		-webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--g)), #000 calc(100% - var(--g) + 1px));
+		mask: radial-gradient(farthest-side, transparent calc(100% - var(--g)), #000 calc(100% - var(--g) + 1px));
+		animation: rueda-girar 0.9s linear infinite;
+	}
+	/* Punta redondeada al final del degradado (arriba, antes de girar) */
+	.rueda::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 50%;
+		width: var(--g);
+		aspect-ratio: 1;
+		translate: -50% 0;
+		border-radius: 50%;
+		background: #fff;
+	}
+	@keyframes rueda-girar {
+		to {
+			rotate: 360deg;
+		}
+	}
+	/* Movimiento reducido: sigue indicando carga, pero mucho más despacio */
+	@media (prefers-reduced-motion: reduce) {
+		.rueda {
+			animation-duration: 3s;
+		}
+	}
+</style>
+
+<script>
+	// Marca como cargado el contenedor [data-carga] de cada imagen cuando termina (o falla).
+	// `load` y `error` no burbujean: se escuchan en captura sobre el documento, así también
+	// funcionan las imágenes de tarjetas que se clonan después (carrusel infinito).
+	const marcar = (img: Element) => img.closest('[data-carga]')?.setAttribute('data-cargada', '');
+	const alTerminar = (e: Event) => e.target instanceof HTMLImageElement && marcar(e.target);
+	document.addEventListener('load', alTerminar, true);
+	document.addEventListener('error', alTerminar, true);
+	// las que ya estaban descargadas antes de que corriera este script
+	document.querySelectorAll<HTMLImageElement>('[data-carga] img').forEach((img) => {
+		if (img.complete && img.naturalWidth > 0) marcar(img);
+	});
+</script>

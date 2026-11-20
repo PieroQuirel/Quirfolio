@@ -2,6 +2,7 @@
 import { Image } from 'astro:assets';
 import ProyectoCard from './ProyectoCard.astro';
 import BotonesProyecto from './BotonesProyecto.astro';
+import RuedaCarga from './RuedaCarga.astro';
 import '@fontsource/saira-semi-condensed/400.css';
 import '@fontsource/saira-semi-condensed/700.css';
 import { UI, getLang } from '../i18n/ui';
@@ -13,6 +14,7 @@ const LISTA = PROYECTOS.map((p) => ({ ...p, imagen: p.imagenes[0] }));
 ---
 
 <section class="proyectos reveal-host" id="proyectos">
+	<noscript><style>[data-carga] img{opacity:1 !important}.rueda{display:none}</style></noscript>
 	<div class="reveal from-bottom">
 		<h2 class="encabezado">{t.titulo}</h2>
 
@@ -38,13 +40,15 @@ const LISTA = PROYECTOS.map((p) => ({ ...p, imagen: p.imagenes[0] }));
 								<div class="galeria" data-galeria role="group" aria-roledescription={t.rolCarrusel} aria-label={t.imagenesDe(p.titulo)}>
 									<ul class="g-pista" tabindex={p.imagenes.length > 1 ? 0 : undefined}>
 										{p.imagenes.map((img, k) => (
-											<li class="g-slide">
+											<li class="g-slide" data-carga>
+												<RuedaCarga tamano="3rem" />
 												<button type="button" class="g-ampliar" aria-label={t.ampliar} aria-haspopup="dialog">
 												<Image
 													src={img}
 													alt={t.vistaPrevia(p.titulo, k + 1, p.imagenes.length)}
 													widths={[480, 800, 1200]}
 													sizes="(min-width: 46rem) 28rem, 90vw"
+													quality={62}
 													draggable="false"
 												/>
 												</button>
@@ -265,6 +269,14 @@ const LISTA = PROYECTOS.map((p) => ({ ...p, imagen: p.imagenes[0] }));
 	});
 
 	// ---- Modal ----
+	// Al apuntar o tocar una tarjeta se adelanta la descarga de la primera imagen del modal (son "lazy" y el
+	// modal está oculto): así suele estar lista cuando se abre.
+	const adelantar = (e: Event) => {
+		const boton = (e.target as HTMLElement).closest<HTMLElement>('.abrir');
+		detalles[Number(boton?.dataset.i)]?.querySelector('img')?.setAttribute('loading', 'eager');
+	};
+	cinta.addEventListener('pointerover', adelantar);
+	cinta.addEventListener('pointerdown', adelantar);
 	cinta.addEventListener('click', (e) => {
 		const boton = (e.target as HTMLElement).closest<HTMLElement>('.abrir');
 		if (!boton) return;
@@ -529,6 +541,7 @@ const LISTA = PROYECTOS.map((p) => ({ ...p, imagen: p.imagenes[0] }));
 	}
 	/* Cada imagen cabe entera en el recuadro (object-fit: contain), sea horizontal, cuadrada o vertical */
 	.g-slide {
+		position: relative; /* la rueda de carga se centra en cada imagen */
 		flex: 0 0 100%;
 		height: 100%;
 		min-width: 0;
